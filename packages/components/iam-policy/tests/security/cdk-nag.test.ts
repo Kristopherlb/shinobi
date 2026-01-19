@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { IamPolicyComponentComponent } from '../iam-policy.component.js';
-import { IamPolicyComponentConfigBuilder } from '../iam-policy.builder.js';
+import { IamPolicyComponentComponent } from '../../iam-policy.component.js';
+import { IamPolicyComponentConfigBuilder } from '../../iam-policy.builder.js';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

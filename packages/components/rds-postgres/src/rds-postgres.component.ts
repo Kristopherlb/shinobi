@@ -75,8 +75,7 @@ export class RdsPostgresComponent extends BaseComponent {
   }
 
   private resolveLogRetention(days: number): logs.RetentionDays {
-    const retentionMap = logs.RetentionDays as unknown as Record<number, logs.RetentionDays>;
-    return retentionMap[days] ?? logs.RetentionDays.THREE_MONTHS;
+    return this.mapLogRetentionDays(days);
   }
 
   private resolveComparisonOperator(value?: string): cloudwatch.ComparisonOperator {

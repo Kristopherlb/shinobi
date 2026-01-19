@@ -78,6 +78,9 @@ export interface EcsClusterConfig {
   
   /** Tagging configuration */
   tags?: Record<string, string>;
+  
+  /** High-risk environment flag (set via platform config or service.yml). When true, applies enhanced security defaults aligned with FedRAMP requirements. */
+  highRiskEnvironment?: boolean;
 }
 
 /**
@@ -98,9 +101,30 @@ export const ECS_CLUSTER_CONFIG_SCHEMA = ECS_CLUSTER_CONFIG_SCHEMA_JSON;
 export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterConfig> {
  
   public buildSync(): EcsClusterConfig {
-    const config = super.buildSync();
-    this.validateConfig(config);
-    return config;
+    // Get all layers
+    const hardcodedFallbacks = this.getHardcodedFallbacks();
+    const platformConfig = (this as any)._loadPlatformConfiguration();
+    const environmentConfig = (this as any)._getEnvironmentConfiguration();
+    const componentOverrides = this.builderContext.spec.config || {};
+    const policyOverrides = (this as any)._getPolicyOverrides();
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge in precedence order: hardcoded < platform < compliance < environment < component < policy
+    const mergedConfig = (this as any)._deepMergeConfigs(
+      hardcodedFallbacks,
+      platformConfig,
+      complianceDefaults,
+      environmentConfig,
+      componentOverrides,
+      policyOverrides
+    );
+    
+    // Resolve environment interpolations (${env:key} patterns)
+    const resolvedConfig = (this as any)._resolveEnvironmentInterpolationsSync(mergedConfig);
+    
+    // Validate final config
+    this.validateConfig(resolvedConfig);
+    return resolvedConfig;
   }
   
   constructor(context: ConfigBuilderContext) {
@@ -139,72 +163,71 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
   
   /**
    * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
    */
   protected getComplianceFrameworkDefaults(): Partial<EcsClusterConfig> {
-    const framework = this.builderContext.context.complianceFramework;
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<EcsClusterConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
     
-    switch (framework) {
-      case 'fedramp-high':
-        return {
-          containerInsights: true, // Mandatory for high compliance
-          monitoring: {
-            enabled: true,
-            detailedMetrics: true
-          },
-          capacity: {
-            enableMonitoring: true, // Enhanced monitoring required
-            instanceType: 'm5.large', // Larger instances for compliance workloads
-            minSize: 2, // High availability
-            maxSize: 10 // Reasonable scale for compliance
-          },
-          observability: {
-            logging: {
-              retentionInDays: 365
-            }
-          }
-        };
-        
-      case 'fedramp-moderate':
-        return {
-          containerInsights: true, // Required for compliance
-          monitoring: {
-            enabled: true,
-            detailedMetrics: true
-          },
-          capacity: {
-            enableMonitoring: true, // Enhanced monitoring
-            instanceType: 't3.medium', // Cost-balanced instances
-            minSize: 1,
-            maxSize: 5
-          },
-          observability: {
-            logging: {
-              retentionInDays: 90
-            }
-          }
-        };
-        
-      default: // commercial
-        return {
-          containerInsights: true, // Good practice for commercial
-          monitoring: {
-            enabled: true,
-            detailedMetrics: false
-          },
-          capacity: {
-            enableMonitoring: false, // Cost optimization
-            instanceType: 't3.small', // Cost-optimized instances
-            minSize: 1,
-            maxSize: 3
-          },
-          observability: {
-            logging: {
-              retentionInDays: 14
-            }
-          }
-        };
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
+    
+    // Don't force capacity defaults - capacity should only be added if:
+    // 1. User explicitly requests it in spec.config.capacity, OR
+    // 2. Platform config provides it
+    // Compliance framework defaults should not force capacity on minimal clusters
+    const userConfig = this.builderContext.spec.config || {};
+    const hasUserCapacity = userConfig.capacity !== undefined && userConfig.capacity !== null;
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      const highRiskDefaults: Partial<EcsClusterConfig> = {
+        containerInsights: true, // Mandatory for high-risk environments
+        monitoring: {
+          enabled: true,
+          detailedMetrics: true
+        },
+        observability: {
+          logging: {
+            retentionInDays: 365 // Can be overridden to 2555 for higher risk scenarios
+          }
+        }
+      };
+      
+      // Only add capacity defaults if user has explicitly provided capacity config
+      // This ensures minimal clusters remain minimal even for high-risk environments
+      if (hasUserCapacity && typeof userConfig.capacity === 'object') {
+        // User provided capacity config - enhance it with high-risk defaults
+        highRiskDefaults.capacity = {
+          enableMonitoring: true, // Enhanced monitoring required
+          instanceType: 'm5.large', // Larger instances for high-risk workloads
+          minSize: 2, // High availability
+          maxSize: 10, // Reasonable scale for high-risk environments
+          ...(userConfig.capacity as any) // Merge with user's capacity config
+        };
+      }
+      // If user didn't provide capacity, don't add it - keep cluster minimal
+      
+      return highRiskDefaults;
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   private validateConfig(config: EcsClusterConfig): void {

@@ -55,8 +55,8 @@ export class DaggerEnginePoolCreator implements IComponentCreator {
     }
 
     // Validate FIPS mode configuration
-    if (config.fipsMode === false && context?.complianceFramework?.includes('fedramp')) {
-      throw new Error('FIPS mode is required for FedRAMP compliance frameworks');
+    if (config.fipsMode === false && config?.highRiskEnvironment) {
+      throw new Error('FIPS mode is required for high-risk environments');
     }
 
     // Validate storage configuration

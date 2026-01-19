@@ -4,8 +4,22 @@
  * Tests the 5-layer configuration precedence chain and validation.
  */
 
-import { SecurityGroupImportConfigBuilder, SecurityGroupImportConfig } from '../../src/security-group-import.builder.js';
+import { SecurityGroupImportConfigBuilder, SecurityGroupImportConfig } from '../../src/security-group-import.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Mock platform configuration loading to avoid requiring config files in tests
+let platformConfigSpy: any;
+
+beforeEach(() => {
+  platformConfigSpy = vi
+    .spyOn(SecurityGroupImportConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockImplementation(() => ({}));
+});
+
+afterEach(() => {
+  platformConfigSpy?.mockRestore();
+});
 
 describe('SecurityGroupImportConfigBuilder', () => {
   let mockContext: ComponentContext;
@@ -30,10 +44,16 @@ describe('SecurityGroupImportConfigBuilder', () => {
 
   describe('5-Layer Configuration Precedence', () => {
     it('should use hardcoded fallbacks when no other configuration is provided', () => {
+      // ssmParameterName is required - provide it in config
+      mockSpec.config = {
+        securityGroup: {
+          ssmParameterName: '/test/security-groups/default'
+        }
+      };
       const builder = new SecurityGroupImportConfigBuilder({ context: mockContext, spec: mockSpec });
       const config = builder.buildSync();
 
-      expect(config.securityGroup.ssmParameterName).toBe('/platform/security-groups/default');
+      expect(config.securityGroup.ssmParameterName).toBe('/test/security-groups/default');
       expect(config.securityGroup.region).toBeUndefined();
       expect(config.securityGroup.accountId).toBeUndefined();
       expect(config.validation?.validateExistence).toBe(true);
@@ -74,6 +94,12 @@ describe('SecurityGroupImportConfigBuilder', () => {
     it('should apply environment variables in configuration', () => {
       process.env.SECURITY_GROUP_IMPORT_VALIDATION_TIMEOUT = '120';
       process.env.SECURITY_GROUP_IMPORT_VALIDATE_VPC = 'true';
+
+      mockSpec.config = {
+        securityGroup: {
+          ssmParameterName: '/test/env-vars/security-group'
+        }
+      };
 
       const builder = new SecurityGroupImportConfigBuilder({ context: mockContext, spec: mockSpec });
       const config = builder.buildSync();
@@ -226,6 +252,12 @@ describe('SecurityGroupImportConfigBuilder', () => {
     it('should apply FedRAMP Moderate settings', () => {
       mockContext.complianceFramework = 'fedramp-moderate';
       
+      mockSpec.config = {
+        securityGroup: {
+          ssmParameterName: '/test/fedramp-moderate/security-group'
+        }
+      };
+      
       const builder = new SecurityGroupImportConfigBuilder({ context: mockContext, spec: mockSpec });
       const config = builder.buildSync();
 
@@ -236,6 +268,12 @@ describe('SecurityGroupImportConfigBuilder', () => {
 
     it('should apply FedRAMP High settings', () => {
       mockContext.complianceFramework = 'fedramp-high';
+      
+      mockSpec.config = {
+        securityGroup: {
+          ssmParameterName: '/test/fedramp-high/security-group'
+        }
+      };
       
       const builder = new SecurityGroupImportConfigBuilder({ context: mockContext, spec: mockSpec });
       const config = builder.buildSync();

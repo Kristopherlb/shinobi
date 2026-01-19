@@ -141,6 +141,26 @@ This section is the definitive registry of all officially supported capabilities
 
 **Example Providers**: `ecs-fargate-service`, `ecs-ec2-service`
 
+### AI Capabilities
+
+#### `ai:provider`
+
+**Definition**: Represents an AI model provider endpoint (hosted or local).
+
+**Data Shape Contract**:
+| Field | Type | Description & CDK Source |
+| :--- | :--- | :--- |
+| providerType | string | Provider identifier (openai, anthropic, bedrock, gemini, ollama). From component config. |
+| model | string | Model identifier. From component config. |
+| endpoint | string? | Provider base URL for HTTP APIs. From component config. |
+| region | string? | AWS region for Bedrock providers. From component context/config. |
+| auth.type | string | Authentication type (apiKey, aws, none). From component config. |
+| auth.secretRef | string? | Secret reference for credentials. From component config. |
+| connectionConfig | object | Provider-specific connection fields (auth type, headers, AWS region). |
+| environmentVariables | object | Environment variable mappings for client SDKs. |
+
+**Example Providers**: `ai-provider`
+
 ### Networking & Caching Capabilities
 
 #### `net:vpc`

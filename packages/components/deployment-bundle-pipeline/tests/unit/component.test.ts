@@ -2,30 +2,31 @@
  * Unit tests for Deployment Bundle Pipeline Component
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { DeploymentBundlePipelineComponent } from '../../src/deployment-bundle-pipeline.component.js';
-import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.js';
+import { DeploymentBundlePipelineComponent } from '../../src/deployment-bundle-pipeline.component';
+import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder';
 
 describe('DeploymentBundlePipelineComponent', () => {
   let component: DeploymentBundlePipelineComponent;
   let stack: Stack;
   let context: any;
   let spec: any;
-  let platformConfigSpy: jest.SpyInstance;
-  let loggerStub: { info: jest.Mock; error: jest.Mock; warn: jest.Mock };
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
+  let loggerStub: { info: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     stack = new Stack(undefined, 'TestStack');
-    platformConfigSpy = jest
+    platformConfigSpy = vi
       .spyOn(DeploymentBundlePipelineBuilder.prototype as any, '_loadPlatformConfiguration')
-      .mockReturnValue({ defaults: { 'deployment-bundle-pipeline': {} } });
+      .mockReturnValue({});
     loggerStub = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn()
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn()
     };
-    jest.spyOn(DeploymentBundlePipelineComponent.prototype, 'getLogger').mockReturnValue(loggerStub as any);
+    vi.spyOn(DeploymentBundlePipelineComponent.prototype, 'getLogger').mockReturnValue(loggerStub as any);
     context = {
       account: '123456789012',
       region: 'us-east-1',
@@ -47,7 +48,7 @@ describe('DeploymentBundlePipelineComponent', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Component Creation', () => {
@@ -179,14 +180,14 @@ describe('DeploymentBundlePipelineComponent', () => {
       component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock the synthesis process
-      jest.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'runTests').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'synthesizeInfrastructure').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'generateSecurityArtifacts').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'generateComplianceReports').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'createDeploymentBundle').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'signAndAttestBundle').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'verifyAndPromote').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'runTests').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'synthesizeInfrastructure').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'generateSecurityArtifacts').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'generateComplianceReports').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'createDeploymentBundle').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'signAndAttestBundle').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'verifyAndPromote').mockResolvedValue(undefined);
 
       await component.synth();
 
@@ -205,7 +206,7 @@ describe('DeploymentBundlePipelineComponent', () => {
       component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock build failure
-      jest.spyOn(component as any, 'buildService').mockRejectedValue(new Error('Build failed'));
+      vi.spyOn(component as any, 'buildService').mockRejectedValue(new Error('Build failed'));
 
       await expect(component.synth()).rejects.toThrow('Build failed');
     });
@@ -214,8 +215,8 @@ describe('DeploymentBundlePipelineComponent', () => {
       component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock test failure
-      jest.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'runTests').mockRejectedValue(new Error('Tests failed'));
+      vi.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'runTests').mockRejectedValue(new Error('Tests failed'));
 
       await expect(component.synth()).rejects.toThrow('Tests failed');
     });
@@ -257,7 +258,7 @@ describe('DeploymentBundlePipelineComponent', () => {
       component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock scan with critical vulnerabilities
-      jest.spyOn(component as any, 'scanWorkspace').mockResolvedValue({
+      vi.spyOn(component as any, 'scanWorkspace').mockResolvedValue({
         tool: 'grype',
         timestamp: new Date().toISOString(),
         totalVulnerabilities: 1,
@@ -382,14 +383,14 @@ describe('DeploymentBundlePipelineComponent', () => {
       component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock the synthesis process
-      jest.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'runTests').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'synthesizeInfrastructure').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'generateSecurityArtifacts').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'generateComplianceReports').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'createDeploymentBundle').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'signAndAttestBundle').mockResolvedValue(undefined);
-      jest.spyOn(component as any, 'verifyAndPromote').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'runTests').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'synthesizeInfrastructure').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'generateSecurityArtifacts').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'generateComplianceReports').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'createDeploymentBundle').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'signAndAttestBundle').mockResolvedValue(undefined);
+      vi.spyOn(component as any, 'verifyAndPromote').mockResolvedValue(undefined);
 
       await component.synth();
 

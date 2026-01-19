@@ -12,7 +12,8 @@
     "*.component.ts",
     "*.builder.ts",
     "*.creator.ts",
-    "index.ts"
+    "index.ts",
+    "Config.schema.json"
   ],
   "exclude": [
     "dist",

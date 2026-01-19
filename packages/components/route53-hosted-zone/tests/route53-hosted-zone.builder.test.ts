@@ -1,8 +1,9 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import {
   Route53HostedZoneComponentConfigBuilder,
   Route53HostedZoneConfig
-} from '../route53-hosted-zone.builder.js';
+} from '../route53-hosted-zone.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => {

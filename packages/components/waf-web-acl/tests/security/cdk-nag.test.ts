@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { WafWebAclComponent } from '../waf-web-acl.component.js';
-import { WafWebAclComponentConfigBuilder } from '../waf-web-acl.builder.js';
+import { WafWebAclComponent } from '../../waf-web-acl.component';
+import { WafWebAclComponentConfigBuilder } from '../../waf-web-acl.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

@@ -110,6 +110,8 @@ export interface ElastiCacheRedisConfig {
   multiAz: RedisMultiAzConfig;
   monitoring: RedisMonitoringConfig;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const AUTH_TOKEN_SCHEMA: ComponentConfigSchema = {
@@ -387,23 +389,48 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
    * Layer 2: Compliance Framework Defaults
    * Security and compliance-specific configurations
    */
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
   protected getComplianceFrameworkDefaults(): Partial<ElastiCacheRedisConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<ElastiCacheRedisConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
       return {
         encryption: {
           atRest: true, // Required for compliance
           inTransit: true, // Required for compliance
           authToken: {
             enabled: true, // Required for compliance
-            removalPolicy: 'retain' as RemovalPolicyOption // FedRAMP requires retention for secrets
+            removalPolicy: 'retain' as RemovalPolicyOption // High-risk environments require retention for secrets
           }
         }
       };
     }
 
-    return {}; // Commercial defaults (removalPolicy from hardcoded fallbacks)
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): ElastiCacheRedisConfig {

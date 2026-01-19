@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ApplicationLoadBalancerComponentConfigBuilder } from '../src/application-load-balancer.builder.ts';
 
 const createContext = (framework = 'commercial') => ({
@@ -24,41 +24,9 @@ describe('ApplicationLoadBalancerConfigBuilder__Precedence__FrameworkDefaults', 
   let loadPlatformConfigSpy;
 
   beforeEach(() => {
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(ApplicationLoadBalancerComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
-      .mockImplementation(function () {
-        const framework = this.builderContext.context.complianceFramework;
-        if (framework === 'fedramp-moderate') {
-          return {
-            scheme: 'internal',
-            deletionProtection: true,
-            accessLogs: { enabled: true, removalPolicy: 'retain' },
-            listeners: [{ port: 443, protocol: 'HTTPS' }],
-            monitoring: { enabled: true }
-          };
-        }
-
-        if (framework === 'fedramp-high') {
-          return {
-            scheme: 'internal',
-            deletionProtection: true,
-            accessLogs: { enabled: true, retentionDays: 365, removalPolicy: 'retain' },
-            listeners: [{ port: 443, protocol: 'HTTPS' }],
-            monitoring: { enabled: true },
-            securityGroups: { create: true, ingress: [] }
-          };
-        }
-
-        return {
-          scheme: 'internet-facing',
-          ipAddressType: 'ipv4',
-          deletionProtection: false,
-          accessLogs: { enabled: true, retentionDays: 90 },
-          listeners: [{ port: 80, protocol: 'HTTP' }],
-          monitoring: { enabled: true },
-          securityGroups: { create: true, ingress: [] }
-        };
-      });
+      .mockImplementation(() => ({})); // Return empty - defaults come from getComplianceFrameworkDefaults
   });
 
   afterEach(() => {
@@ -111,7 +79,11 @@ describe('ApplicationLoadBalancerConfigBuilder__Precedence__FrameworkDefaults', 
    * }
    */
   it('FedrampModerateDefaults__InternalFacing__EnforcesDeletionProtection', () => {
-    const builder = new ApplicationLoadBalancerComponentConfigBuilder(createContext('fedramp-moderate'), createSpec());
+    // Set highRiskEnvironment flag for high-risk environments (data-driven, not framework-dependent)
+    const builder = new ApplicationLoadBalancerComponentConfigBuilder(
+      createContext('fedramp-moderate'),
+      createSpec({ highRiskEnvironment: true })
+    );
     const config = builder.buildSync();
 
     expect(config.scheme).toBe('internal');

@@ -5,9 +5,24 @@
  */
 
 import { Stack } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
-import { SecurityGroupImportComponent } from '../../src/security-group-import.component.js';
+import { Template, Match } from 'aws-cdk-lib/assertions';
+import { SecurityGroupImportComponent } from '../../src/security-group-import.component';
+import { SecurityGroupImportConfigBuilder } from '../../src/security-group-import.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Mock platform configuration loading to avoid requiring config files in tests
+let platformConfigSpy: any;
+
+beforeEach(() => {
+  platformConfigSpy = vi
+    .spyOn(SecurityGroupImportConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockImplementation(() => ({}));
+});
+
+afterEach(() => {
+  platformConfigSpy?.mockRestore();
+});
 
 describe('SecurityGroupImportComponent', () => {
   let stack: Stack;
@@ -43,11 +58,9 @@ describe('SecurityGroupImportComponent', () => {
 
       // Should not create any new AWS resources (it's an import)
       template.resourceCountIs('AWS::EC2::SecurityGroup', 0);
-
-      // Should create SSM parameter reference
-      template.hasResourceProperties('AWS::SSM::Parameter', {
-        Name: '/test/security-groups/web-servers'
-      });
+      
+      // StringParameter.fromStringParameterName() imports existing parameters, doesn't create resources
+      template.resourceCountIs('AWS::SSM::Parameter', 0);
     });
 
     it('should import security group with cross-region configuration', () => {
@@ -195,8 +208,8 @@ describe('SecurityGroupImportComponent', () => {
 
       // Should create custom resource for validation
       template.hasResourceProperties('AWS::CloudFormation::CustomResource', {
-        SecurityGroupId: { Ref: expect.any(String) },
-        VpcId: undefined,
+        SecurityGroupId: { Ref: Match.anyValue() },
+        VpcId: Match.absent(),
         ValidateVpc: true,
         Timeout: 45
       });

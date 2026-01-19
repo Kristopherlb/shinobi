@@ -20,14 +20,20 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "preserveSymlinks": false,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@shinobi/core": ["packages/core/src/index.ts"],
+      "@shinobi/binders": ["packages/binders/src/index.ts"],
+      "@shinobi/api": ["packages/api/src/index.ts"],
+      "@shinobi/orchestration": ["packages/orchestration/src/index.ts"],
+      "@shinobi/governance": ["packages/governance/src/index.ts"]
+    }
   },
   "exclude": [
     "dist",
     "node_modules",
     "packages/core/_temp-problematic-files/**",
     "packages/core/_temp-problematic-platform/**",
-    "**/vitest.config.ts",
-    "**/jest.config.ts"
+    "**/vitest.config.ts"
   ]
 }

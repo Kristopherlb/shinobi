@@ -3,7 +3,7 @@ import { App, Stack, Environment } from 'aws-cdk-lib';
 import {
   ElastiCacheRedisComponentConfigBuilder,
   ElastiCacheRedisConfig
-} from '../src/elasticache-redis.builder.js';
+} from '../src/elasticache-redis.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
@@ -167,11 +167,14 @@ describe('ElastiCacheRedisComponentConfigBuilder', () => {
     }));
 
     // Builder should allow the config (validation happens in component synthesis)
+    // Builder will still add default engine-log entry if monitoring.enabled !== false
     const config = builder.buildSync();
-    expect(config.monitoring.logDelivery).toHaveLength(2);
-    expect(config.monitoring.logDelivery[0].logType).toBe('slow-log');
-    expect(config.monitoring.logDelivery[1].logType).toBe('slow-log');
-    expect(config.monitoring.logDelivery[0].destinationType).toBe('cloudwatch-logs');
-    expect(config.monitoring.logDelivery[1].destinationType).toBe('kinesis-firehose');
+    expect(config.monitoring.logDelivery.length).toBeGreaterThanOrEqual(2);
+    
+    // Find the two slow-log entries from the test config
+    const slowLogEntries = config.monitoring.logDelivery.filter(entry => entry.logType === 'slow-log');
+    expect(slowLogEntries).toHaveLength(2);
+    expect(slowLogEntries[0].destinationType).toBe('cloudwatch-logs');
+    expect(slowLogEntries[1].destinationType).toBe('kinesis-firehose');
   });
 });

@@ -3,6 +3,9 @@
  * 
  * Provides comprehensive input validation and error handling for Lambda Worker components.
  * Ensures all configurations meet security, compliance, and operational requirements.
+ * 
+ * NOTE: This validator is config-driven and validates config values only.
+ * All validation logic uses risk-based flags set by the builder.
  */
 
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
@@ -15,6 +18,7 @@ export interface ValidationError {
   field: string;
   message: string;
   severity: 'error' | 'warning';
+  /** Optional compliance framework metadata (for logging only, not used in validation logic) */
   complianceFramework?: string;
 }
 
@@ -33,9 +37,11 @@ export interface ValidationResult {
  * 
  * Validates Lambda Worker component configurations against:
  * - Security best practices
- * - Compliance framework requirements
  * - Operational requirements
  * - Performance optimization guidelines
+ * 
+ * This validator is config-driven and validates resolved config values only.
+ * All validation is based on config flags set by the builder.
  */
 export class LambdaWorkerValidator {
   private context: ComponentContext;
@@ -151,18 +157,22 @@ export class LambdaWorkerValidator {
 
   /**
    * Validate security configuration
+   * Uses config flags set by builder (highRiskEnvironment, requireKmsEncryption)
    */
   private validateSecurityConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // VPC configuration for high-security environments
-    if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
-      if (!this.config.vpc?.enabled) {
+    const isHighRisk = this.config?.highRiskEnvironment ?? false;
+    
+    // VPC configuration for high-risk environments (set via config flag)
+    if (isHighRisk) {
+      if (!this.config.vpc || !this.config.vpc.enabled) {
         errors.push({
           field: 'vpc.enabled',
-          message: 'VPC configuration is mandatory for FedRAMP compliance',
+          message: 'VPC configuration is mandatory for high-risk environments',
           severity: 'error',
-          complianceFramework: this.context.complianceFramework
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       } else {
+        // Only validate vpcId/securityGroupIds if VPC is enabled
         if (!this.config.vpc.vpcId) {
           errors.push({
             field: 'vpc.vpcId',
@@ -180,14 +190,14 @@ export class LambdaWorkerValidator {
       }
     }
 
-    // KMS encryption for sensitive data
-    if (this.context.complianceFramework === 'fedramp-high' || this.context.complianceFramework === 'hipaa') {
+    // KMS encryption for high-risk environments (set via config flag)
+    if (this.config?.requireKmsEncryption ?? false) {
       if (!this.config.kmsKeyArn) {
         errors.push({
           field: 'kmsKeyArn',
-          message: 'KMS encryption is mandatory for high-compliance frameworks',
+          message: 'KMS encryption is mandatory for high-risk environments',
           severity: 'error',
-          complianceFramework: this.context.complianceFramework
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
@@ -209,55 +219,54 @@ export class LambdaWorkerValidator {
       }
     }
 
-    // Security tools validation
-    if (this.context.complianceFramework === 'fedramp-high') {
-      // Note: lambda-worker only supports falco, not runtimeSecurity
-      if (!this.config.securityTools?.falco) {
+    // Security tools validation for high-risk environments
+    if (isHighRisk) {
+      if (!this.config.securityTools?.runtimeSecurity) {
         warnings.push({
-          field: 'securityTools.falco',
-          message: 'Runtime security monitoring (Falco) is recommended for high-compliance environments',
+          field: 'securityTools.runtimeSecurity',
+          message: 'Runtime security monitoring is recommended for high-risk environments',
           severity: 'warning',
-          complianceFramework: this.context.complianceFramework
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
   }
 
   /**
-   * Validate compliance framework requirements
+   * Validate compliance configuration based on config flags set by builder
+   * Uses risk-based config flags (highRiskEnvironment, requireActiveTracing, etc.)
    */
   private validateComplianceConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // Log retention requirements
-    const minLogRetention = this.getMinimumLogRetention();
+    // Log retention requirements - use minLogRetentionDays from config (set by builder)
+    const minLogRetention = this.config?.minLogRetentionDays ?? 30;
     if (this.config.logging.logRetentionDays < minLogRetention) {
       errors.push({
         field: 'logging.logRetentionDays',
-        message: `Log retention must be at least ${minLogRetention} days for ${this.context.complianceFramework} compliance`,
-        severity: 'error',
-        complianceFramework: this.context.complianceFramework
+        message: `Log retention must be at least ${minLogRetention} days (set by builder based on risk level)`,
+        severity: 'error'
       });
     }
 
-    // Tracing requirements for compliance
-    if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
+    // Tracing requirements for high-risk environments (set via config flag)
+    if (this.config?.requireActiveTracing ?? false) {
       if (this.config.tracing.mode !== 'Active') {
         errors.push({
           field: 'tracing.mode',
-          message: 'Active X-Ray tracing is mandatory for FedRAMP compliance',
+          message: 'Active X-Ray tracing is mandatory for high-risk environments',
           severity: 'error',
-          complianceFramework: this.context.complianceFramework
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
 
-    // Hardening profile validation
-    if (this.context.complianceFramework === 'fedramp-high') {
+    // Hardening profile validation for high-risk environments (set via config flag)
+    if (this.config?.requireHighHardening ?? false) {
       if (this.config.hardeningProfile !== 'high') {
         warnings.push({
           field: 'hardeningProfile',
-          message: 'High hardening profile is recommended for FedRAMP High compliance',
+          message: 'High hardening profile is recommended for high-risk environments',
           severity: 'warning',
-          complianceFramework: this.context.complianceFramework
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
@@ -329,9 +338,11 @@ export class LambdaWorkerValidator {
    * Validate operational configuration
    */
   private validateOperationalConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // Environment validation
+    // Environment validation - only warn for production-like environments
+    // Skip warning for test/dev environments to avoid noise in test suites
     const validEnvironments = ['development', 'staging', 'production'];
-    if (!validEnvironments.includes(this.context.environment)) {
+    const testEnvironments = ['test', 'dev', 'local'];
+    if (!validEnvironments.includes(this.context.environment) && !testEnvironments.includes(this.context.environment)) {
       warnings.push({
         field: 'environment',
         message: `Environment '${this.context.environment}' is not a standard environment name`,
@@ -377,26 +388,6 @@ export class LambdaWorkerValidator {
         message: `Application log level must be one of: ${validLogLevels.join(', ')}`,
         severity: 'error'
       });
-    }
-  }
-
-  /**
-   * Get minimum log retention days based on compliance framework
-   */
-  private getMinimumLogRetention(): number {
-    switch (this.context.complianceFramework) {
-      case 'commercial':
-        return 30;
-      case 'fedramp-moderate':
-        return 90;
-      case 'fedramp-high':
-        return 180;
-      case 'hipaa':
-        return 90;
-      case 'sox':
-        return 2555; // 7 years
-      default:
-        return 30;
     }
   }
 

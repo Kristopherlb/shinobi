@@ -46,6 +46,8 @@ export interface OpenFeatureProviderComponentConfig {
   launchDarkly?: LaunchDarklyProviderConfig;
   flagsmith?: FlagsmithProviderConfig;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const MONITOR_SCHEMA: ComponentConfigSchema = {
@@ -162,6 +164,59 @@ export class OpenFeatureProviderComponentConfigBuilder extends ConfigBuilder<Ope
 
   protected getHardcodedFallbacks(): Partial<OpenFeatureProviderComponentConfig> {
     return DEFAULT_CONFIG;
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<OpenFeatureProviderComponentConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<OpenFeatureProviderComponentConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        highRiskEnvironment: true, // Set the flag so component can use it
+        awsAppConfig: {
+          applicationName: '', // Will be overridden by user config
+          environmentName: '', // Will be overridden by user config
+          configurationProfileName: '', // Will be overridden by user config
+          // More conservative deployment strategy for high-risk environments
+          deploymentStrategy: {
+            name: 'progressive-rollout',
+            deploymentDurationMinutes: 30, // Longer deployment duration for high-risk
+            growthFactor: 10, // Slower growth (10% vs 20% default)
+            growthType: 'LINEAR',
+            finalBakeTimeInMinutes: 15, // Longer bake time for high-risk
+            replicateTo: 'SSM_DOCUMENT'
+          },
+          monitors: [], // Will be overridden by user config
+          retrieverServicePrincipal: 'appconfig.amazonaws.com' // Default service principal
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): OpenFeatureProviderComponentConfig {

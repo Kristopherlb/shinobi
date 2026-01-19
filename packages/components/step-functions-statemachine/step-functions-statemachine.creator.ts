@@ -121,12 +121,13 @@ export class StepFunctionsStateMachineCreator implements IComponentCreator {
     
     // Production environment validations
     if (context.environment === 'prod') {
-      if (context.complianceFramework === 'fedramp-moderate' || context.complianceFramework === 'fedramp-high') {
+      // High-risk environment validations (set via config or platform config)
+      if (config?.highRiskEnvironment) {
         if (config?.loggingConfiguration?.enabled === false) {
-          errors.push('Logging must be enabled in FedRAMP environments');
+          errors.push('Logging must be enabled in high-risk environments');
         }
         if (config?.tracingConfiguration?.enabled === false) {
-          errors.push('X-Ray tracing must be enabled in FedRAMP environments');
+          errors.push('X-Ray tracing must be enabled in high-risk environments');
         }
       }
     }

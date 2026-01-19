@@ -1,10 +1,11 @@
-import { jest } from '@jest/globals';
-import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder';
 
 const createContext = (framework = 'commercial') => ({
   serviceName: 'test-http-service',
   environment: framework === 'fedramp-high' ? 'prod' : 'dev',
   complianceFramework: framework,
+  scope: {} as any,
   region: 'us-east-1',
   accountId: '123456789012',
   tags: {
@@ -24,8 +25,8 @@ describe('ApiGatewayHttpConfigBuilder__Precedence__FrameworkDefaults', () => {
   let loadPlatformConfigSpy;
 
   beforeEach(() => {
-    loadPlatformConfigSpy = jest
-      .spyOn(ApiGatewayHttpConfigBuilder.prototype, '_loadPlatformConfiguration')
+    loadPlatformConfigSpy = vi
+      .spyOn(ApiGatewayHttpConfigBuilder.prototype as any, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;
         if (framework === 'fedramp-moderate') {

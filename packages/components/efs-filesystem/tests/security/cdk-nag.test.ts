@@ -6,14 +6,12 @@
  */
 
 import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EfsFilesystemComponent } from '../../src/efs-filesystem.component.js';
-
-const VPC_ID = 'vpc-0abc123def4567890';
-const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
+import { EfsFilesystemComponent } from '../../src/efs-filesystem.component';
 
 const createContext = (framework?: string): ComponentContext => {
   const fw = framework || 'commercial';
@@ -28,25 +26,6 @@ const createContext = (framework?: string): ComponentContext => {
 };
 
 describe.skip('EfsFilesystemComponent - CDK Nag Security Validation', () => {
-  const originalContext = process.env.CDK_CONTEXT_JSON;
-
-  beforeAll(() => {
-    process.env.CDK_CONTEXT_JSON = JSON.stringify({
-      [CONTEXT_KEY]: {
-        vpcId: VPC_ID,
-        availabilityZones: ['us-east-1a', 'us-east-1b'],
-        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
-      }
-    });
-  });
-
-  afterAll(() => {
-    if (originalContext === undefined) {
-      delete process.env.CDK_CONTEXT_JSON;
-    } else {
-      process.env.CDK_CONTEXT_JSON = originalContext;
-    }
-  });
 
   describe('Commercial Framework - AwsSolutions', () => {
     it('passes AwsSolutions-EFS1 (encryption at rest)', () => {

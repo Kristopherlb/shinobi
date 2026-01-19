@@ -126,6 +126,8 @@ export interface OpenSearchDomainConfig {
   hardeningProfile: string;
   removalPolicy: OpenSearchRemovalPolicy;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 export const OPENSEARCH_DOMAIN_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
@@ -217,6 +219,159 @@ export class OpenSearchDomainComponentConfigBuilder extends ConfigBuilder<OpenSe
       removalPolicy: 'destroy',
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<OpenSearchDomainConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<OpenSearchDomainConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        cluster: {
+          instanceType: 'r6g.large.search', // Will be overridden by user config
+          instanceCount: 2, // Will be overridden by user config
+          // Enable multi-AZ for high availability
+          zoneAwarenessEnabled: true,
+          availabilityZoneCount: 2, // Can be overridden to 3 for higher risk scenarios
+          // Enable dedicated master nodes for stability
+          dedicatedMasterEnabled: true,
+          masterInstanceCount: 3,
+          warmEnabled: false // Will be overridden by user config if needed
+        },
+        encryption: {
+          atRest: {
+            enabled: true,
+            // KMS key ARN should be provided via service.yml for customer-managed keys
+            kmsKeyArn: undefined
+          },
+          nodeToNode: true
+        },
+        domainEndpoint: {
+          enforceHttps: true,
+          tlsSecurityPolicy: 'Policy-Min-TLS-1-2-2019-07'
+        },
+        advancedSecurity: {
+          // Enable fine-grained access control for high-risk environments
+          enabled: true,
+          internalUserDatabaseEnabled: false // Use IAM or SAML instead
+        },
+        vpc: {
+          // Enable VPC for network isolation in high-risk environments
+          // VPC configuration should be provided via service.yml
+          enabled: true,
+          subnetIds: [], // Will be overridden by user config
+          securityGroupIds: [], // Will be overridden by user config
+          createSecurityGroup: true,
+          ingressRules: [] // Will be overridden by user config
+        },
+        logging: {
+          // Enable slow search logging
+          slowSearch: {
+            enabled: true,
+            createLogGroup: true,
+            retentionInDays: 1095,
+            removalPolicy: 'retain'
+          },
+          // Enable slow index logging
+          slowIndex: {
+            enabled: true,
+            createLogGroup: true,
+            retentionInDays: 1095,
+            removalPolicy: 'retain'
+          },
+          // Enable audit logging with extended retention for high-risk environments
+          audit: {
+            enabled: true,
+            createLogGroup: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk scenarios)
+            removalPolicy: 'retain'
+          },
+          // Enable application logging for troubleshooting
+          application: {
+            enabled: true,
+            createLogGroup: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk scenarios)
+            removalPolicy: 'retain'
+          }
+        },
+        monitoring: {
+          // Enable monitoring and alarms for high-risk environments
+          enabled: true,
+          alarms: {
+            clusterStatusRed: {
+              enabled: true,
+              threshold: 0,
+              evaluationPeriods: 1,
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'breaching',
+              statistic: 'Maximum'
+            },
+            clusterStatusYellow: {
+              enabled: true,
+              threshold: 0,
+              evaluationPeriods: 1,
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'breaching',
+              statistic: 'Maximum'
+            },
+            jvmMemoryPressure: {
+              enabled: true,
+              threshold: 80,
+              evaluationPeriods: 3,
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'breaching',
+              statistic: 'Maximum'
+            },
+            freeStorageSpace: {
+              enabled: true,
+              threshold: 20,
+              evaluationPeriods: 1,
+              periodMinutes: 5,
+              comparisonOperator: 'lt',
+              treatMissingData: 'breaching',
+              statistic: 'Minimum'
+            }
+          }
+        },
+        maintenance: {
+          autoTune: {
+            enabled: true,
+            desiredState: 'ENABLED'
+          },
+          offPeakWindowEnabled: true
+        },
+        removalPolicy: 'retain' // Retain resources in high-risk environments
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): OpenSearchDomainConfig {

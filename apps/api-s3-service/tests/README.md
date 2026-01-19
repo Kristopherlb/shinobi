@@ -2,6 +2,8 @@
 
 End-to-end smoke tests for the `api-s3-service` stack.
 
+**Note**: This is an **opt-in E2E test suite** that requires AWS credentials and a deployed stack. It is **excluded from the default test suite** (`pnpm nx run-many -t test --all`) and will not run during offline testing. To run these tests, set `RUN_SMOKE_TESTS=true` and ensure AWS credentials are configured.
+
 ## Overview
 
 This test suite validates the complete flow:

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { App, Stack, Environment } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { KinesisStreamComponent } from '../kinesis-stream.component.js';
-import { KinesisStreamConfig } from '../kinesis-stream.builder.js';
+import { KinesisStreamComponent } from '../kinesis-stream.component';
+import { KinesisStreamConfig } from '../kinesis-stream.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => {
@@ -65,8 +65,8 @@ describe('KinesisStreamComponent synthesis', () => {
 
     template.hasResourceProperties('AWS::Kinesis::Stream', {
       Name: 'ingest-events',
-      ShardCount: Match.integerGreaterThan(1),
-      RetentionPeriodHours: Match.integerGreaterThanOrEqual(168)
+      ShardCount: 4, // FedRAMP High default from platform config
+      RetentionPeriodHours: 168 // FedRAMP High default from platform config
     });
   });
 

@@ -90,14 +90,20 @@ export class SecurityGroupImportComponent extends BaseComponent {
     if (!validation?.validateExistence) return;
 
     // Create a custom resource to validate the security group exists
+    const validatorProps: Record<string, any> = {
+      SecurityGroupId: securityGroup.securityGroupId,
+      ValidateVpc: validation.validateVpc || false,
+      Timeout: validation.validationTimeout || 30
+    };
+
+    // Only include VpcId if it's provided
+    if (sgConfig.vpcId) {
+      validatorProps.VpcId = sgConfig.vpcId;
+    }
+
     const validator = new cdk.CustomResource(this, 'SecurityGroupValidator', {
       serviceToken: this.createValidationLambda(),
-      properties: {
-        SecurityGroupId: securityGroup.securityGroupId,
-        VpcId: sgConfig.vpcId,
-        ValidateVpc: validation.validateVpc || false,
-        Timeout: validation.validationTimeout || 30
-      }
+      properties: validatorProps
     });
 
     // Ensure the security group is created before validation
@@ -146,8 +152,13 @@ export class SecurityGroupImportComponent extends BaseComponent {
    * Get component outputs
    */
   public getOutputs(): Record<string, any> {
+    const region = this.config.securityGroup.region || this.context.region;
+    const accountId = this.config.securityGroup.accountId || this.context.accountId;
+    const securityGroupArn = `arn:aws:ec2:${region}:${accountId}:security-group/${this.securityGroup.securityGroupId}`;
+    
     return {
       securityGroupId: this.securityGroup.securityGroupId,
+      securityGroupArn,
       vpcId: this.config.securityGroup.vpcId,
       ssmParameterName: this.config.securityGroup.ssmParameterName,
       ssmParameterValue: this.ssmParameter.stringValue

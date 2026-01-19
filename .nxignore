@@ -1,12 +1,63 @@
+# Dependencies
 node_modules
+**/node_modules/
+
+# Build outputs
 dist
+**/dist/
+**/dist-types/
 coverage
-.nx
+**/coverage/
+tmp
+**/tmp/
+
+# TypeScript build info
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# CDK outputs
 cdk.out
 **/cdk.out/**
-*.tsbuildinfo
+cdk.context.json
+**/cdk.context.json
+
+# Baseline captures (large, should not be indexed)
+baselines
+baseline-*/
+**/baselines/
+
+# NX cache
+.nx
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs
 *.log
+**/*.log
+
+# Environment files
 .env
 .env.local
+.env.*.local
 
+# IDE
+.idea/
+.vscode/
+.cursor/skills
+**/.cursor/skills
+
+# Generated files
+**/*-template.json
+**/*-dev-template.json
+**/*-prod-template.json
+
+# Test artifacts
+apps/test-service/
+apps/test-ec2/
+**/synth-output/
+
+# Compiled JavaScript in source (shouldn't exist but ignore if present)
+**/src/**/*.js
+**/src/**/*.js.map

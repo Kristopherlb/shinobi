@@ -1,6 +1,7 @@
 /**
- * Jest setup file for deployment bundle pipeline tests
+ * Vitest setup file for deployment bundle pipeline tests
  */
+import { vi } from 'vitest';
 
 // Export mocks as modules for moduleNameMapper
 export const BaseComponent = class MockBaseComponent {
@@ -12,10 +13,10 @@ export const BaseComponent = class MockBaseComponent {
     this.context = context;
     this.spec = spec;
     this.logger = {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
     };
   }
 
@@ -160,7 +161,7 @@ export const ConfigBuilder = class MockConfigBuilder {
 };
 
 // Mock the platform core modules
-jest.mock('@shinobi/core', () => ({
+vi.mock('@shinobi/core', () => ({
   BaseComponent: class MockBaseComponent {
     context: any;
     spec: any;
@@ -170,10 +171,10 @@ jest.mock('@shinobi/core', () => ({
       this.context = context;
       this.spec = spec;
       this.logger = {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
       };
     }
 
@@ -404,24 +405,24 @@ jest.mock('@shinobi/core', () => ({
 }));
 
 // Mock AWS CDK
-jest.mock('aws-cdk-lib/assertions', () => ({
+vi.mock('aws-cdk-lib/assertions', () => ({
   Template: {
-    fromStack: jest.fn(() => ({
+    fromStack: vi.fn(() => ({
       // Mock template methods
     }))
   }
 }));
 
-jest.mock('aws-cdk-lib', () => ({
-  Stack: jest.fn()
+vi.mock('aws-cdk-lib', () => ({
+  Stack: vi.fn()
 }));
 
 // Mock console methods to reduce noise in tests
 global.console = {
   ...console,
-  log: jest.fn(),
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
+  log: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
 };

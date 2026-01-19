@@ -1,5 +1,5 @@
-import { jest } from '@jest/globals';
-import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder';
 
 const createContext = (framework = 'commercial') => ({
   serviceName: 'test-service',
@@ -24,7 +24,7 @@ describe('ApiGatewayRestConfigBuilder__Precedence__FrameworkDefaults', () => {
   let loadPlatformConfigSpy;
 
   beforeEach(() => {
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(ApiGatewayRestConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;

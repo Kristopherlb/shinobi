@@ -1,0 +1,93 @@
+{
+  "tests": [
+    {
+      "id": "TP-LAMBDA-API-COMPONENT-001",
+      "testName": "CommercialDefaults__BaselineConfiguration__SynthesizesLambdaApiGateway",
+      "level": "unit",
+      "capability": "Commercial synthesis uses platform defaults for Lambda and API Gateway",
+      "oracle": "contract",
+      "invariants": [
+        "Lambda function created with handler and runtime",
+        "API Gateway REST API created",
+        "Tracing enabled on Lambda and API Gateway",
+        "No usage plan for commercial framework",
+        "JSON structured logging configured"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "LambdaApiComponent",
+        "ComponentContext",
+        "ComponentSpec"
+      ],
+      "inputs": {
+        "shape": "Commercial context without overrides",
+        "notes": "Validates default behavior for commercial compliance framework"
+      },
+      "risks": [],
+      "dependencies": [
+        "config/commercial.yml",
+        "@shinobi/core",
+        "aws-cdk-lib"
+      ],
+      "evidence": [
+        "CloudFormation template assertions",
+        "Template.fromStack() results"
+      ],
+      "compliance_refs": [
+        "std://platform-configuration-standard",
+        "std://platform-observability-standard",
+        "std://platform-logging-standard"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-team",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-LAMBDA-API-COMPONENT-002",
+      "testName": "FedRAMPHighDefaults__ComplianceHardening__EnforcesVpcUsagePlanAndApiKey",
+      "level": "unit",
+      "capability": "FedRAMP High defaults enforce VPC, usage plan, API key, and extended log retention",
+      "oracle": "contract",
+      "invariants": [
+        "VPC configuration enabled",
+        "Encryption enabled",
+        "Usage plan created and enforced",
+        "API key required for methods",
+        "Extended log retention (3653 days) configured",
+        "CORS configured with explicit origins"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "LambdaApiComponent",
+        "ComponentContext",
+        "ComponentSpec",
+        "Mock VPC subnet and security group IDs"
+      ],
+      "inputs": {
+        "shape": "FedRAMP High context with VPC and encryption configuration",
+        "notes": "Validates compliance hardening for FedRAMP High framework. VPC and encryption are enabled via compliance framework defaults."
+      },
+      "risks": [],
+      "dependencies": [
+        "config/fedramp-high.yml",
+        "@shinobi/core",
+        "aws-cdk-lib"
+      ],
+      "evidence": [
+        "CloudFormation template assertions",
+        "Template.fromStack() results",
+        "VPC configuration in Lambda function",
+        "Usage plan and API key resources"
+      ],
+      "compliance_refs": [
+        "std://platform-configuration-standard",
+        "std://platform-observability-standard",
+        "std://platform-logging-standard",
+        "fedramp-high"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-team",
+      "negative_case_id": ""
+    }
+  ]
+}

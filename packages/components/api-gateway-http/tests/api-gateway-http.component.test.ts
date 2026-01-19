@@ -1,9 +1,9 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 
-import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component.js';
-import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.js';
+import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component';
+import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder';
 
 const createContext = (framework = 'commercial', scope?: Stack) => ({
   serviceName: 'test-http-service',
@@ -24,7 +24,7 @@ describe('ApiGatewayHttpComponent__Synthesis__HttpApiResources', () => {
   let app: App;
   let stack: Stack;
   let context;
-  let loadPlatformConfigSpy: jest.SpiedFunction<ApiGatewayHttpConfigBuilder['_loadPlatformConfiguration']>;
+  let loadPlatformConfigSpy: MockInstance;
 
   beforeEach(() => {
     app = new App();
@@ -33,8 +33,8 @@ describe('ApiGatewayHttpComponent__Synthesis__HttpApiResources', () => {
     });
     context = createContext('commercial', stack);
 
-    loadPlatformConfigSpy = jest
-      .spyOn(ApiGatewayHttpConfigBuilder.prototype, '_loadPlatformConfiguration')
+    loadPlatformConfigSpy = vi
+      .spyOn(ApiGatewayHttpConfigBuilder.prototype as any, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;
         if (framework === 'fedramp-moderate') {

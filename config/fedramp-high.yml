@@ -797,6 +797,14 @@ defaults:
         retrieverServicePrincipal: lambda.amazonaws.com
       tags:
         compliance: fedramp-high
+
+    ai-provider:
+      provider: bedrock
+      model: anthropic.claude-3-haiku-20240307-v1:0
+      auth:
+        type: aws
+      tags:
+        compliance: fedramp-high
   
     feature-flag:
       enabled: true
@@ -898,7 +906,7 @@ defaults:
       logging:
         createLogGroup: true
         streamPrefix: service
-        retentionInDays: 731
+        retentionInDays: 2557
         removalPolicy: retain
       monitoring:
         enabled: true
@@ -1320,6 +1328,11 @@ defaults:
         compliance-framework: fedramp-high
         security-level: high
   
+    route53-record:
+      tags:
+        compliance-framework: fedramp-high
+        security-level: high
+  
     iam-policy:
       controls:
         denyInsecureTransport: true
@@ -1538,6 +1551,21 @@ defaults:
         logExports:
           - postgresql
       hardeningProfile: stig
+    step-functions-statemachine:
+      stateMachineType: STANDARD
+      loggingConfiguration:
+        enabled: true
+        level: ALL
+        includeExecutionData: true
+      tracingConfiguration:
+        enabled: true
+      timeout:
+        seconds: 1800
+      highRiskEnvironment: true
+      tags:
+        compliance-framework: fedramp-high
+        security-level: high
+
     iam-role:
       maxSessionDuration: 3600
       path: "/"
@@ -1548,7 +1576,7 @@ defaults:
           removalPolicy: retain
         audit:
           enabled: true
-          retentionInDays: 730
+          retentionInDays: 1095
           removalPolicy: retain
       monitoring:
         enabled: true

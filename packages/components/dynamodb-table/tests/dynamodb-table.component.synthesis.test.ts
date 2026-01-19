@@ -1,18 +1,8 @@
-jest.mock(
-  '@shinobi/core-logger',
-  () => ({
-    Logger: {
-      getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-      setGlobalContext: jest.fn()
-    }
-  }),
-  { virtual: true }
-);
-
+import { describe, it, expect } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { DynamoDbTableComponent } from '../src/dynamodb-table.component.js';
-import { DynamoDbTableConfig } from '../src/dynamodb-table.builder.js';
+import { DynamoDbTableComponent } from '../src/dynamodb-table.component';
+import { DynamoDbTableConfig } from '../src/dynamodb-table.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createContext = (framework: string): ComponentContext => ({

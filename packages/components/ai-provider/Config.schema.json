@@ -1,0 +1,50 @@
+{
+  "$id": "https://platform.shinobi.internal/schemas/ai-provider/v1.0.0",
+  "title": "AI Provider Config",
+  "description": "Configuration schema for AI provider component (OpenAI, Gemini, Anthropic, Bedrock, Ollama)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "AI provider identifier",
+      "enum": ["openai", "gemini", "anthropic", "bedrock", "ollama"]
+    },
+    "model": {
+      "type": "string",
+      "description": "Model identifier for the provider (defaults applied when omitted)"
+    },
+    "endpoint": {
+      "type": "string",
+      "description": "Base URL or service endpoint"
+    },
+    "region": {
+      "type": "string",
+      "description": "AWS region for Bedrock runtime (defaults to platform context region)."
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication settings for the provider",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["apiKey", "aws", "none"]
+        },
+        "secretRef": {
+          "type": "string",
+          "description": "Reference to a secret containing API credentials"
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags to associate with provider metadata",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -20,7 +20,8 @@ const testMetadata = {
   "human_reviewed_by": "platform-team"
 };
 
-import { DaggerConfigBuilder } from '../../src/dagger-engine-pool.builder.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { DaggerConfigBuilder } from '../../src/dagger-engine-pool.builder';
 import { DaggerConfig } from '../../src/types.js';
 
 describe('DaggerConfigBuilder', () => {
@@ -33,7 +34,7 @@ describe('DaggerConfigBuilder', () => {
 
   afterEach(() => {
     // Cleanup (Platform Testing Standard §6)
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Builder__PlatformDefaults__AppliesSecureDefaults', () => {

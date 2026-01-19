@@ -5,14 +5,15 @@
  * Tests the foundational ECS Service Connect component with full compliance validation
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComponentSpec } from '@shinobi/core/component-interfaces';
-import { EcsClusterComponent } from '../src/ecs-cluster.component.js';
-import { EcsClusterComponentConfigBuilder } from '../src/ecs-cluster.builder.js';
+import { EcsClusterComponent } from '../src/ecs-cluster.component';
+import { EcsClusterComponentConfigBuilder } from '../src/ecs-cluster.builder';
 import { 
   TestFixtureFactory, 
   TestAssertions, 
@@ -21,10 +22,10 @@ import {
   TEST_SPECS 
 } from '../test-fixtures.js';
 
-let platformConfigSpy: jest.SpyInstance;
+let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  platformConfigSpy = jest
+  platformConfigSpy = vi
     .spyOn(EcsClusterComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
     .mockImplementation(() => ({}));
 });
@@ -326,11 +327,20 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
       vpc
     };
 
+    // Set highRiskEnvironment flag for high-risk environments (data-driven, not framework-dependent)
+    const fedrampSpec = {
+      ...env.specs.ec2Cluster,
+      config: {
+        ...env.specs.ec2Cluster.config,
+        highRiskEnvironment: true
+      }
+    };
+
     const component = new EcsClusterComponent(
       stack,
       'FedrampCluster',
       context,
-      env.specs.ec2Cluster
+      fedrampSpec
     );
 
     component.synth();
@@ -370,11 +380,21 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
         vpc: frameworkVpc
       };
 
+      // Set highRiskEnvironment flag for FedRAMP frameworks (data-driven, not framework-dependent)
+      const isHighRisk = framework === 'fedrampModerate' || framework === 'fedrampHigh';
+      const spec = isHighRisk ? {
+        ...testEnv.specs.ec2Cluster,
+        config: {
+          ...testEnv.specs.ec2Cluster.config,
+          highRiskEnvironment: true
+        }
+      } : testEnv.specs.ec2Cluster;
+
       const component = new EcsClusterComponent(
         frameworkStack,
         `TestCluster-${String(framework)}`,
         context,
-        testEnv.specs.ec2Cluster
+        spec
       );
 
       component.synth();
@@ -766,11 +786,20 @@ describe('EcsClusterComponent__CapabilityContract__ServiceConnectProvision', () 
   });
 
   it('Capabilities__FedrampCluster__OmitsSpotCapacity', async () => {
+    // For high-risk environments (FedRAMP), set highRiskEnvironment flag in config
+    const fedrampSpec = {
+      ...testEnv.specs.minimalCluster,
+      config: {
+        ...testEnv.specs.minimalCluster.config,
+        highRiskEnvironment: true
+      }
+    };
+    
     const fedrampComponent = new EcsClusterComponent(
       testEnv.stack,
       'FedrampCluster',
       testEnv.contexts.fedrampHigh,
-      testEnv.specs.minimalCluster
+      fedrampSpec
     );
 
     fedrampComponent.synth();
@@ -882,15 +911,37 @@ describe('EcsClusterComponent__ErrorHandling__ValidationFailures', () => {
  */
 describe('EcsClusterComponent__LoggingCompliance__StructuredEvents', () => {
   let testEnv: ReturnType<typeof TestFixtureFactory.createTestEnvironment>;
-  let consoleLogSpy: jest.SpyInstance;
+  let stderrWriteSpy: ReturnType<typeof vi.spyOn>;
+  let stdoutWriteSpy: ReturnType<typeof vi.spyOn>;
+  let logOutput: string[];
 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    logOutput = [];
+    
+    // Spy on both stderr and stdout since logger writes to different streams based on environment
+    stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: any) => {
+      if (typeof chunk === 'string') {
+        logOutput.push(chunk);
+      }
+      return true;
+    });
+    
+    stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: any) => {
+      if (typeof chunk === 'string') {
+        logOutput.push(chunk);
+      }
+      return true;
+    });
+    
+    // Force logger to use stderr by setting MCP_TRANSPORT environment variable
+    process.env.MCP_TRANSPORT = 'stdio';
   });
 
   afterEach(() => {
-    consoleLogSpy.mockRestore();
+    stderrWriteSpy.mockRestore();
+    stdoutWriteSpy.mockRestore();
+    delete process.env.MCP_TRANSPORT;
     TestFixtureFactory.cleanup();
   });
 
@@ -904,17 +955,14 @@ describe('EcsClusterComponent__LoggingCompliance__StructuredEvents', () => {
 
     component.synth();
 
-    // Verify structured logging calls were made
-    expect(consoleLogSpy).toHaveBeenCalled();
+    // Verify structured logging calls were made (either stderr or stdout)
+    const wasCalled = stderrWriteSpy.mock.calls.length > 0 || stdoutWriteSpy.mock.calls.length > 0;
+    expect(wasCalled).toBe(true);
 
-    // Check for synthesis lifecycle events
-    const logCalls = consoleLogSpy.mock.calls.flat();
-    const hasStartEvent = logCalls.some(call => 
-      typeof call === 'string' && call.includes('synthesis_start')
-    );
-    const hasCompleteEvent = logCalls.some(call => 
-      typeof call === 'string' && call.includes('synthesis_complete')
-    );
+    // Check for synthesis lifecycle events in JSON logs
+    const logOutputStr = logOutput.join('');
+    const hasStartEvent = logOutputStr.includes('synthesis_start');
+    const hasCompleteEvent = logOutputStr.includes('synthesis_complete');
 
     expect(hasStartEvent).toBe(true);
     expect(hasCompleteEvent).toBe(true);
@@ -930,18 +978,12 @@ describe('EcsClusterComponent__LoggingCompliance__StructuredEvents', () => {
 
     component.synth();
 
-    const logCalls = consoleLogSpy.mock.calls.flat();
+    const logOutputStr = logOutput.join('');
     
-    // Check for resource creation events
-    const hasClusterEvent = logCalls.some(call => 
-      typeof call === 'string' && call.includes('ecs-cluster')
-    );
-    const hasNamespaceEvent = logCalls.some(call => 
-      typeof call === 'string' && call.includes('service-connect-namespace')
-    );
-    const hasCapacityEvent = logCalls.some(call => 
-      typeof call === 'string' && call.includes('ec2-capacity')
-    );
+    // Check for resource creation events in JSON logs
+    const hasClusterEvent = logOutputStr.includes('ecs-cluster') && logOutputStr.includes('resource_creation');
+    const hasNamespaceEvent = logOutputStr.includes('service-connect-namespace') && logOutputStr.includes('resource_creation');
+    const hasCapacityEvent = logOutputStr.includes('ec2-capacity') && logOutputStr.includes('resource_creation');
 
     expect(hasClusterEvent).toBe(true);
     expect(hasNamespaceEvent).toBe(true);

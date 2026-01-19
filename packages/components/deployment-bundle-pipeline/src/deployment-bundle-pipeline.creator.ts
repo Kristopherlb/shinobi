@@ -47,13 +47,8 @@ export class DeploymentBundlePipelineCreator implements IComponentCreator {
       }
     }
 
-    // Validate compliance framework if provided
-    if (spec.complianceFramework) {
-      const validFrameworks = ['commercial', 'fedramp-moderate', 'fedramp-high', 'iso27001', 'soc2'];
-      if (!validFrameworks.includes(spec.complianceFramework)) {
-        throw new Error(`Invalid compliance framework. Must be one of: ${validFrameworks.join(', ')}`);
-      }
-    }
+    // Compliance framework validation removed - frameworks are informational only
+    // Components use risk-based configuration flags instead
 
     // Validate signing configuration if provided
     if (spec.signing) {

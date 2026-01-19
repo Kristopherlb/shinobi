@@ -33,14 +33,18 @@
       }
     },
     "test": {
-      "executor": "@nx/vitest:test",
+      "executor": "nx:run-commands",
       "outputs": [
-        "{options.outputPath}"
+        "{projectRoot}/coverage"
       ],
       "options": {
-        "config": "apps/svc/vitest.config.ts",
-        "passWithNoTests": true,
-        "outputPath": "coverage/apps/shinobi"
+        "commands": [
+          {
+            "command": "vitest run --config vitest.config.ts",
+            "forwardAllArgs": false
+          }
+        ],
+        "cwd": "{projectRoot}"
       }
     },
     "lint": {

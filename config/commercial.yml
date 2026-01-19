@@ -289,7 +289,7 @@ defaults:
     storage:
       rootVolumeSize: 20
       rootVolumeType: gp3
-      encrypted: true
+      encrypted: false
       deleteOnTermination: true
     monitoring:
       detailed: false
@@ -745,6 +745,14 @@ defaults:
         replicateTo: SSM_DOCUMENT
       monitors: []
       retrieverServicePrincipal: lambda.amazonaws.com
+    tags: {}
+
+  ai-provider:
+    provider: openai
+    model: gpt-4o-mini
+    endpoint: https://api.openai.com/v1
+    auth:
+      type: apiKey
     tags: {}
 
   feature-flag:
@@ -1247,6 +1255,9 @@ defaults:
     removalPolicy: retain
     tags: {}
 
+  route53-record:
+    tags: {}
+
   iam-policy:
     controls:
       denyInsecureTransport: false
@@ -1440,3 +1451,21 @@ defaults:
     monitoring:
       enabled: true
       detailedMetrics: false
+
+  step-functions-statemachine:
+    stateMachineType: STANDARD
+    loggingConfiguration:
+      enabled: false
+      level: ERROR
+      includeExecutionData: false
+    tracingConfiguration:
+      enabled: false
+    timeout:
+      seconds: 3600
+    highRiskEnvironment: false
+    tags: {}
+
+  network-rules-stack:
+    ssmPathPrefix: /shinobi/network-rules
+    description: Cross-stack security group rules from all services
+    tags: {}

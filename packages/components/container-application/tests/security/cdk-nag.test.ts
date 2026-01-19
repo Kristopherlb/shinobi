@@ -2,7 +2,7 @@ import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Match, Annotations } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import type { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { ContainerApplicationComponent } from '../../src/container-application.component.js';
+import { ContainerApplicationComponent } from '../../src/container-application.component';
 
 const createContext = (stack: Stack): ComponentContext => ({
   scope: stack,

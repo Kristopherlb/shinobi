@@ -3,47 +3,48 @@
  * 
  * Provides mocks and test utilities for IAM role component testing.
  */
+import { vi } from 'vitest';
 
 // Mock AWS CDK constructs
-jest.mock('aws-cdk-lib', () => ({
+vi.mock('aws-cdk-lib', () => ({
   Duration: {
-    seconds: jest.fn((seconds) => seconds)
+    seconds: vi.fn((seconds) => seconds)
   },
-  Stack: jest.fn().mockImplementation(() => ({
+  Stack: vi.fn().mockImplementation(() => ({
     node: {
       id: 'test-stack',
-      addChild: jest.fn()
+      addChild: vi.fn()
     }
   })),
-  App: jest.fn().mockImplementation(() => ({
+  App: vi.fn().mockImplementation(() => ({
     node: {
       id: 'test-app',
-      addChild: jest.fn()
+      addChild: vi.fn()
     }
   }))
 }));
 
-jest.mock('aws-cdk-lib/aws-iam', () => ({
-  Role: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-iam', () => ({
+  Role: vi.fn().mockImplementation(() => ({
     roleArn: 'arn:aws:iam::123456789012:role/test-role',
     roleName: 'test-role',
     roleId: 'AROA1234567890EXAMPLE',
     node: {
       id: 'test-role',
-      addChild: jest.fn()
+      addChild: vi.fn()
     }
   })),
-  ServicePrincipal: jest.fn().mockImplementation((service) => ({ service })),
-  ArnPrincipal: jest.fn().mockImplementation((arn) => ({ arn })),
-  AccountPrincipal: jest.fn().mockImplementation((account) => ({ account })),
-  CompositePrincipal: jest.fn().mockImplementation(() => ({
-    addToPolicy: jest.fn()
+  ServicePrincipal: vi.fn().mockImplementation((service) => ({ service })),
+  ArnPrincipal: vi.fn().mockImplementation((arn) => ({ arn })),
+  AccountPrincipal: vi.fn().mockImplementation((account) => ({ account })),
+  CompositePrincipal: vi.fn().mockImplementation(() => ({
+    addToPolicy: vi.fn()
   })),
   ManagedPolicy: {
-    fromManagedPolicyArn: jest.fn().mockImplementation((scope, id, arn) => ({ arn }))
+    fromManagedPolicyArn: vi.fn().mockImplementation((scope, id, arn) => ({ arn }))
   },
-  PolicyStatement: jest.fn().mockImplementation((props) => props),
-  PolicyDocument: jest.fn().mockImplementation((props) => props),
+  PolicyStatement: vi.fn().mockImplementation((props) => props),
+  PolicyDocument: vi.fn().mockImplementation((props) => props),
   Effect: {
     ALLOW: 'Allow',
     DENY: 'Deny'
@@ -51,28 +52,28 @@ jest.mock('aws-cdk-lib/aws-iam', () => ({
 }));
 
 // Mock CDK assertions
-jest.mock('aws-cdk-lib/assertions', () => ({
+vi.mock('aws-cdk-lib/assertions', () => ({
   Template: {
-    fromStack: jest.fn().mockImplementation(() => ({
-      hasResourceProperties: jest.fn()
+    fromStack: vi.fn().mockImplementation(() => ({
+      hasResourceProperties: vi.fn()
     }))
   }
 }));
 
 // Mock platform contracts
-jest.mock('@shinobi/core', () => ({
-  BaseComponent: jest.fn().mockImplementation(function (this: any) {
-    this.applyStandardTags = jest.fn();
-    this.registerConstruct = jest.fn();
-    this.registerCapability = jest.fn();
-    this.validateSynthesized = jest.fn();
-    this.logComponentEvent = jest.fn();
-    this.logPerformanceMetric = jest.fn();
-    this.logResourceCreation = jest.fn();
-    this.logError = jest.fn();
+vi.mock('@shinobi/core', () => ({
+  BaseComponent: vi.fn().mockImplementation(function (this: any) {
+    this.applyStandardTags = vi.fn();
+    this.registerConstruct = vi.fn();
+    this.registerCapability = vi.fn();
+    this.validateSynthesized = vi.fn();
+    this.logComponentEvent = vi.fn();
+    this.logPerformanceMetric = vi.fn();
+    this.logResourceCreation = vi.fn();
+    this.logError = vi.fn();
     this.capabilities = {};
     this.context = {};
     this.spec = {};
-    this.getConstruct = jest.fn();
+    this.getConstruct = vi.fn();
   })
 }));

@@ -1,12 +1,14 @@
+import { vi } from 'vitest';
+
 export class Logger {
   static setGlobalContext(_: Record<string, unknown>): void {}
 
   static getLogger(_name: string) {
     return {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn()
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn()
     };
   }
 }

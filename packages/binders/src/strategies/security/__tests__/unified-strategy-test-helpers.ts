@@ -66,6 +66,9 @@ export function createMockSourceComponent(type: string = 'lambda-api', name: str
     synth(): void {
       // No-op for tests
     },
+    validateConfig(): void {
+      // No-op for tests; real components may enforce invariants.
+    },
     getCapabilities(): ComponentCapabilities {
       return {};
     },
@@ -128,6 +131,9 @@ export function createMockTargetComponent(
     node: construct.node,
     synth(): void {
       // No-op for tests
+    },
+    validateConfig(): void {
+      // No-op for tests; real components may enforce invariants.
     },
     getCapabilities(): ComponentCapabilities {
       return capabilities;

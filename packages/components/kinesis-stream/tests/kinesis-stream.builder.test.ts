@@ -3,7 +3,7 @@ import { App, Stack, Environment } from 'aws-cdk-lib';
 import {
   KinesisStreamComponentConfigBuilder,
   KinesisStreamConfig
-} from '../kinesis-stream.builder.js';
+} from '../kinesis-stream.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => {

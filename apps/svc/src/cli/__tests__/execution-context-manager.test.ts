@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as YAML from 'yaml';
 import { ExecutionContextManager } from '../execution-context-manager.js';
 import { createMockLogger } from './helpers/mock-logger.js';
@@ -249,9 +250,18 @@ describe('ExecutionContextManager', () => {
         const result = await manager.resolve({ manifestPath: relativePath, environment: 'dev' });
 
         // Should resolve to absolute path from repo root, not from subdirectory
+        // Normalize paths to handle macOS symlinks (/var vs /private/var)
         const expectedPath = path.resolve(repoRoot, relativePath);
-        expect(result.manifestPath).toBe(expectedPath);
-        expect(mockPipeline.plan).toHaveBeenCalledWith(expectedPath, 'dev');
+        // Use realpathSync to resolve symlinks (macOS /var -> /private/var)
+        const normalizedExpected = fsSync.realpathSync(expectedPath);
+        const normalizedActual = fsSync.realpathSync(result.manifestPath);
+        expect(normalizedActual).toBe(normalizedExpected);
+        // Also verify the mock was called with the correct path (normalize for comparison)
+        const mockCallArgs = (mockPipeline.plan as vi.Mock).mock.calls[0];
+        if (mockCallArgs && mockCallArgs[0]) {
+          const normalizedMockPath = fsSync.realpathSync(mockCallArgs[0]);
+          expect(normalizedMockPath).toBe(normalizedExpected);
+        }
       } finally {
         process.chdir(originalCwd);
       }

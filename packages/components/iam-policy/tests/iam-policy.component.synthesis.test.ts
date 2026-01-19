@@ -3,23 +3,12 @@
  * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
  */
 
+import { describe, it, expect } from 'vitest';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { IamPolicyComponentComponent } from '../iam-policy.component.js';
 import { IamPolicyConfig } from '../iam-policy.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-
-jest.mock('@shinobi/core-logger', () => ({
-  Logger: {
-    setGlobalContext: jest.fn(),
-    getLogger: jest.fn(() => ({
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn()
-    }))
-  }
-}), { virtual: true });
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

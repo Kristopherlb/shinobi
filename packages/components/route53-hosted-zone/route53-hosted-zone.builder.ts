@@ -20,7 +20,8 @@ export type AlarmComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte';
 export type AlarmTreatMissingData = 'breaching' | 'not-breaching' | 'ignore' | 'missing';
 
 export interface VpcAssociationConfig {
-  vpcId: string;
+  /** VPC ID for fromLookup(). Optional when using injected VPC via context.vpc */
+  vpcId?: string;
   region?: string;
 }
 
@@ -72,6 +73,8 @@ export interface Route53HostedZoneConfig {
   hardeningProfile: string;
   removalPolicy: RemovalPolicyOption;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 export const ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
@@ -119,6 +122,61 @@ export class Route53HostedZoneComponentConfigBuilder extends ConfigBuilder<Route
       removalPolicy: 'retain',
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<Route53HostedZoneConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<Route53HostedZoneConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        queryLogging: {
+          enabled: true,
+          retentionDays: 365, // Can be overridden to 1095 for higher risk
+          removalPolicy: 'retain'
+        },
+        dnssec: {
+          enabled: true
+        },
+        monitoring: {
+          enabled: true,
+          alarms: {
+            queryVolume: { ...DEFAULT_ALARM_BASELINE },
+            healthCheckFailures: {
+              ...DEFAULT_ALARM_BASELINE,
+              threshold: 10,
+              statistic: 'Sum'
+            }
+          }
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): Route53HostedZoneConfig {

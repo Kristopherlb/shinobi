@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { SageMakerNotebookInstanceComponent } from '../sagemaker-notebook-instance.component.js';
-import { SageMakerNotebookInstanceComponentConfigBuilder } from '../sagemaker-notebook-instance.builder.js';
+import { SageMakerNotebookInstanceComponent } from '../../sagemaker-notebook-instance.component';
+import { SageMakerNotebookInstanceComponentConfigBuilder } from '../../sagemaker-notebook-instance.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

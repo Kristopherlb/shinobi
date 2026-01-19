@@ -157,6 +157,10 @@ export interface LambdaApiConfig {
   removalPolicy: 'retain' | 'destroy';
   tags: Record<string, string>;
   api: LambdaApiGatewayConfig;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Minimum log retention days (set by builder based on risk level) */
+  minLogRetentionDays?: number;
 }
 
 
@@ -293,6 +297,143 @@ export class LambdaApiComponentConfigBuilder extends ConfigBuilder<LambdaApiConf
 
   protected getHardcodedFallbacks(): Record<string, any> {
     return HARDENED_FALLBACKS;
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<LambdaApiConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<LambdaApiConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        logging: {
+          logRetentionDays: 1095, // 3 years (can be overridden to 2555 for higher risk scenarios)
+          logFormat: 'JSON',
+          systemLogLevel: 'INFO',
+          applicationLogLevel: 'INFO'
+        },
+        encryption: {
+          enabled: true,
+          kmsKeyId: undefined // Will be set to customer-managed key if provided
+        },
+        vpc: {
+          enabled: true,
+          // Note: subnetIds and securityGroupIds must be provided in component config
+          // This default only enables VPC - user must provide network configuration
+          vpcId: undefined,
+          subnetIds: [], // Must be provided by user config
+          securityGroupIds: [] // Must be provided by user config
+        },
+        monitoring: {
+          enabled: true,
+          alarms: {
+            lambdaErrors: {
+              enabled: true,
+              threshold: 1, // Stricter threshold for high-risk environments
+              evaluationPeriods: 2, // More evaluation periods
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'not-breaching',
+              statistic: 'Sum',
+              tags: {}
+            },
+            lambdaThrottles: {
+              enabled: true,
+              threshold: 1,
+              evaluationPeriods: 2,
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'not-breaching',
+              statistic: 'Sum',
+              tags: {}
+            },
+            lambdaDuration: {
+              enabled: true,
+              threshold: 50000, // Stricter duration threshold
+              evaluationPeriods: 2,
+              periodMinutes: 5,
+              comparisonOperator: 'gte',
+              treatMissingData: 'not-breaching',
+              statistic: 'Average',
+              tags: {}
+            },
+            api4xxErrors: {
+              enabled: true,
+              threshold: 1, // Stricter threshold for high-risk environments
+              evaluationPeriods: 2,
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'not-breaching',
+              statistic: 'Sum',
+              tags: {}
+            },
+            api5xxErrors: {
+              enabled: true,
+              threshold: 1,
+              evaluationPeriods: 2,
+              periodMinutes: 5,
+              comparisonOperator: 'gt',
+              treatMissingData: 'breaching', // More strict for 5xx errors
+              statistic: 'Sum',
+              tags: {}
+            }
+          }
+        },
+        api: {
+          type: 'rest',
+          stageName: 'prod',
+          metricsEnabled: true,
+          tracingEnabled: true,
+          apiKeyRequired: true, // Require API key for high-risk environments
+          throttling: {
+            burstLimit: 50, // More conservative throttling
+            rateLimit: 25
+          },
+          usagePlan: {
+            enabled: true // Enable usage plan for high-risk environments
+          },
+          logging: {
+            enabled: true,
+            retentionDays: 1095, // 3 years for API Gateway logs
+            logFormat: 'json',
+            prefix: 'access/'
+          },
+          cors: {
+            enabled: true,
+            allowOrigins: [], // Empty array forces explicit configuration (safer)
+            allowHeaders: ['Content-Type', 'Authorization'],
+            allowMethods: ['GET', 'POST', 'OPTIONS'], // Minimal safe methods
+            allowCredentials: false
+          }
+        },
+        minLogRetentionDays: 1095 // Minimum retention for high-risk environments
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public getSchema(): ComponentConfigSchema {

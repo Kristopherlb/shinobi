@@ -194,6 +194,12 @@
             "mode": { "type": "string", "enum": ["GOVERNANCE", "COMPLIANCE"] },
             "retentionDays": { "type": "number", "minimum": 1 }
           }
+        },
+        "framework": {
+          "type": "string",
+          "description": "Compliance framework identifier (commercial, fedramp-moderate, fedramp-high). Set automatically by ConfigBuilder based on context. Components read from config, not context directly.",
+          "enum": ["commercial", "fedramp-moderate", "fedramp-high"],
+          "default": "commercial"
         }
       }
     },

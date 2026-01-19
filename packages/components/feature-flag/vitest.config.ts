@@ -2,11 +2,14 @@ import { defineConfig } from 'vitest/config';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 
 export default defineConfig({
-  plugins: [nxViteTsPaths()],
+  plugins: [nxViteTsPaths({ debug: false })],
   test: {
     globals: true,
     environment: 'node',
     include: ['**/*.{test,spec}.{ts,tsx}'],
+    testTimeout: 10000, // 10 seconds - fail fast if something blocks
+    hookTimeout: 10000,
+    teardownTimeout: 5000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

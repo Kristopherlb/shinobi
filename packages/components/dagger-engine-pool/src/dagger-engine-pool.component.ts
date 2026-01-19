@@ -9,8 +9,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cdk from 'aws-cdk-lib';
-import { BaseComponent, ComponentContext, ComponentSpec, applySecurityGroupTags } from '@shinobi/core';
-// import { applyComplianceTags } from '@shinobi/core-tagging';
+import { BaseComponent, ComponentContext, ComponentSpec, ComponentCapabilities, applySecurityGroupTags } from '@shinobi/core';
 import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.js';
 import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
 
@@ -82,62 +81,41 @@ export class DaggerEnginePool extends BaseComponent {
       }
     });
 
-    // 4) Apply compliance tags to all resources
-    this.applyComplianceTags(kmsKey, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['SC-13', 'SC-7', 'AC-2', 'AU-2', 'CM-6'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    // 4) Apply standard tags to all resources
+    this.applyStandardTags(kmsKey, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'SC-13,SC-7,AC-2,AU-2,CM-6'
     });
-    this.applyComplianceTags(artifactsBucket, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['SC-7', 'AC-2', 'AU-2', 'CM-6'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    this.applyStandardTags(artifactsBucket, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'SC-7,AC-2,AU-2,CM-6'
     });
-    this.applyComplianceTags(securityGroup, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['SC-7', 'AC-2', 'AU-2', 'CM-6'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    this.applyStandardTags(securityGroup, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'SC-7,AC-2,AU-2,CM-6'
     });
-    this.applyComplianceTags(launchTemplate, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['SC-7', 'AC-2', 'AU-2', 'CM-6'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    this.applyStandardTags(launchTemplate, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'SC-7,AC-2,AU-2,CM-6'
     });
-    this.applyComplianceTags(asg, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['SC-7', 'AC-2', 'AU-2', 'CM-6'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    this.applyStandardTags(asg, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'SC-7,AC-2,AU-2,CM-6'
     });
-    this.applyComplianceTags(nlb, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['SC-7', 'AC-2', 'AU-2', 'CM-6'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    this.applyStandardTags(nlb, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'SC-7,AC-2,AU-2,CM-6'
     });
-    this.applyComplianceTags(logGroup, {
-      component: 'dagger-engine-pool',
-      serviceType: 'dagger-engine',
-      framework: this.context.complianceFramework,
-      controls: ['AU-2', 'SC-13'],
-      owner: (this.context as any).owner,
-      environment: this.context.environment
+    this.applyStandardTags(logGroup, {
+      'component-type': 'dagger-engine-pool',
+      'service-type': 'dagger-engine',
+      'compliance-controls': 'AU-2,SC-13'
     });
 
     // 5) Register constructs
@@ -183,7 +161,8 @@ export class DaggerEnginePool extends BaseComponent {
     }
   }
 
-  public getCapabilities() {
+  public getCapabilities(): ComponentCapabilities {
+    this.validateSynthesized();
     return this.capabilities;
   }
 
@@ -454,20 +433,4 @@ export class DaggerEnginePool extends BaseComponent {
     });
   }
 
-  private applyComplianceTags(construct: Construct, tags: {
-    component: string;
-    serviceType: string;
-    framework: string;
-    controls: string[];
-    owner?: string;
-    environment?: string;
-  }): void {
-    // Mock implementation for testing
-    cdk.Tags.of(construct).add('platform:component', tags.component);
-    cdk.Tags.of(construct).add('platform:service', tags.serviceType);
-    cdk.Tags.of(construct).add('compliance:framework', tags.framework);
-    cdk.Tags.of(construct).add('compliance:controls', tags.controls.join(','));
-    if (tags.owner) cdk.Tags.of(construct).add('platform:owner', tags.owner);
-    if (tags.environment) cdk.Tags.of(construct).add('platform:environment', tags.environment);
-  }
 }

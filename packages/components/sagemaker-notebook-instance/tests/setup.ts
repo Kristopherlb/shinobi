@@ -3,18 +3,19 @@
  * 
  * Provides mocks and test utilities for SageMaker notebook instance component testing.
  */
+import { vi } from 'vitest';
 
 // Mock the ConfigBuilder to avoid platform configuration loading during tests
-jest.mock('../../@shinobi/core/config-builder', () => {
-  const originalModule = jest.requireActual('../../@shinobi/core/config-builder');
+vi.mock('../../@shinobi/core/config-builder', () => {
+  const originalModule = vi.importActual('../../@shinobi/core/config-builder');
   
   return {
     ...originalModule,
-    ConfigBuilder: jest.fn().mockImplementation(function(this: any, builderContext: any, schema: any) {
+    ConfigBuilder: vi.fn().mockImplementation(function(this: any, builderContext: any, schema: any) {
       this.context = builderContext.context;
       this.spec = builderContext.spec;
       
-      this.buildSync = jest.fn(() => {
+      this.buildSync = vi.fn(() => {
         // Get the config from the spec
         const userConfig = this.spec.config || {};
         
@@ -110,27 +111,27 @@ jest.mock('../../@shinobi/core/config-builder', () => {
 });
 
 // Mock AWS CDK constructs
-jest.mock('aws-cdk-lib', () => ({
+vi.mock('aws-cdk-lib', () => ({
   Duration: {
-    seconds: jest.fn((seconds) => seconds),
-    minutes: jest.fn((minutes) => minutes)
+    seconds: vi.fn((seconds) => seconds),
+    minutes: vi.fn((minutes) => minutes)
   },
-  Stack: jest.fn().mockImplementation((scope: any, id: string) => ({
+  Stack: vi.fn().mockImplementation((scope: any, id: string) => ({
     node: {
       id: id || 'test-stack',
-      addChild: jest.fn(),
+      addChild: vi.fn(),
       children: []
     },
-    synthesize: jest.fn(),
+    synthesize: vi.fn(),
     template: {
       Resources: {},
       Outputs: {}
     }
   })),
-  App: jest.fn().mockImplementation(() => ({
+  App: vi.fn().mockImplementation(() => ({
     node: {
       id: 'test-app',
-      addChild: jest.fn()
+      addChild: vi.fn()
     }
   })),
   RemovalPolicy: {
@@ -142,38 +143,38 @@ jest.mock('aws-cdk-lib', () => ({
     ACCOUNT_ID: '123456789012'
   },
   Tags: {
-    of: jest.fn().mockReturnValue({
-      add: jest.fn()
+    of: vi.fn().mockReturnValue({
+      add: vi.fn()
     })
   }
 }));
 
 // Mock CDK Template for testing
-            jest.mock('aws-cdk-lib/assertions', () => ({
-              Template: {
-                fromStack: jest.fn().mockImplementation((stack: any) => ({
-                  resourceCountIs: jest.fn(),
-                  hasResource: jest.fn(),
-                  hasResourceProperties: jest.fn(),
-                  findResources: jest.fn(),
-                  findOutputs: jest.fn(),
-                  toJSON: jest.fn().mockReturnValue({
-                    Resources: {},
-                    Outputs: {}
-                  })
-                }))
-              },
-              Match: {
-                anyValue: jest.fn(),
-                exact: jest.fn(),
-                arrayWith: jest.fn(),
-                objectLike: jest.fn(),
-                stringLikeRegexp: jest.fn((pattern: string) => ({ pattern }))
-              }
-            }));
+vi.mock('aws-cdk-lib/assertions', () => ({
+  Template: {
+    fromStack: vi.fn().mockImplementation((stack: any) => ({
+      resourceCountIs: vi.fn(),
+      hasResource: vi.fn(),
+      hasResourceProperties: vi.fn(),
+      findResources: vi.fn(),
+      findOutputs: vi.fn(),
+      toJSON: vi.fn().mockReturnValue({
+        Resources: {},
+        Outputs: {}
+      })
+    }))
+  },
+  Match: {
+    anyValue: vi.fn(),
+    exact: vi.fn(),
+    arrayWith: vi.fn(),
+    objectLike: vi.fn(),
+    stringLikeRegexp: vi.fn((pattern: string) => ({ pattern }))
+  }
+}));
 
-jest.mock('aws-cdk-lib/aws-sagemaker', () => ({
-  CfnNotebookInstance: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-sagemaker', () => ({
+  CfnNotebookInstance: vi.fn().mockImplementation(() => ({
     notebookInstanceName: 'test-notebook',
     instanceType: 'ml.t3.medium',
     roleArn: 'arn:aws:iam::123456789012:role/test-role',
@@ -181,72 +182,72 @@ jest.mock('aws-cdk-lib/aws-sagemaker', () => ({
   }))
 }));
 
-jest.mock('aws-cdk-lib/aws-iam', () => ({
-  Role: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-iam', () => ({
+  Role: vi.fn().mockImplementation(() => ({
     roleArn: 'arn:aws:iam::123456789012:role/test-role',
     roleName: 'test-role'
   })),
-  ServicePrincipal: jest.fn().mockImplementation((service: string) => ({
+  ServicePrincipal: vi.fn().mockImplementation((service: string) => ({
     service,
     toString: () => service
   })),
-  PolicyStatement: jest.fn(),
-  PolicyDocument: jest.fn().mockImplementation((props: any) => props),
+  PolicyStatement: vi.fn(),
+  PolicyDocument: vi.fn().mockImplementation((props: any) => props),
   Effect: {
     ALLOW: 'Allow',
     DENY: 'Deny'
   },
   ManagedPolicy: {
-    fromAwsManagedPolicyName: jest.fn().mockImplementation((name: string) => ({
+    fromAwsManagedPolicyName: vi.fn().mockImplementation((name: string) => ({
       managedPolicyArn: `arn:aws:iam::aws:policy/${name}`,
       managedPolicyName: name
     }))
   }
 }));
 
-jest.mock('aws-cdk-lib/aws-kms', () => ({
-  Key: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-kms', () => ({
+  Key: vi.fn().mockImplementation(() => ({
     keyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-id',
     keyArn: 'arn:aws:kms:us-east-1:123456789012:key/test-key-id'
   }))
 }));
 
-jest.mock('aws-cdk-lib/aws-ec2', () => ({
-  SecurityGroup: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-ec2', () => ({
+  SecurityGroup: vi.fn().mockImplementation(() => ({
     securityGroupId: 'sg-12345678',
     securityGroupName: 'test-sg',
-    addEgressRule: jest.fn()
+    addEgressRule: vi.fn()
   })),
   Subnet: {
-    fromSubnetId: jest.fn(() => ({
+    fromSubnetId: vi.fn(() => ({
       subnetId: 'subnet-12345678'
     }))
   },
   Vpc: {
-    fromLookup: jest.fn(() => ({
+    fromLookup: vi.fn(() => ({
       vpcId: 'vpc-12345678'
     }))
   },
   Peer: {
-    anyIpv4: jest.fn().mockReturnValue({ cidrIp: '0.0.0.0/0' })
+    anyIpv4: vi.fn().mockReturnValue({ cidrIp: '0.0.0.0/0' })
   },
   Port: {
-    tcp: jest.fn().mockImplementation((port: number) => ({ port, protocol: 'tcp' }))
+    tcp: vi.fn().mockImplementation((port: number) => ({ port, protocol: 'tcp' }))
   }
 }));
 
-jest.mock('aws-cdk-lib/aws-cloudwatch', () => ({
-  Metric: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-cloudwatch', () => ({
+  Metric: vi.fn().mockImplementation(() => ({
     namespace: 'AWS/SageMaker/NotebookInstance',
     metricName: 'CPUUtilization'
   })),
-  Alarm: jest.fn().mockImplementation(() => ({
+  Alarm: vi.fn().mockImplementation(() => ({
     alarmName: 'test-alarm'
   }))
 }));
 
-jest.mock('aws-cdk-lib/aws-logs', () => ({
-  LogGroup: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib/aws-logs', () => ({
+  LogGroup: vi.fn().mockImplementation(() => ({
     logGroupName: 'test-log-group'
   })),
   RetentionDays: {

@@ -1,0 +1,23 @@
+{
+  "name": "file-storage-api",
+  "sourceRoot": "apps/api-s3-service/src",
+  "projectType": "library",
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          {
+            "command": "vitest run --config vitest.config.ts",
+            "forwardAllArgs": false
+          }
+        ],
+        "cwd": "{projectRoot}"
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    }
+  }
+}
+

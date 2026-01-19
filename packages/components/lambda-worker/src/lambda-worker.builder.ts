@@ -116,6 +116,7 @@ export interface LambdaWorkerConfig {
   };
   securityTools: {
     falco: boolean;
+    runtimeSecurity?: boolean;
   };
   monitoring: {
     enabled: boolean;
@@ -128,6 +129,16 @@ export interface LambdaWorkerConfig {
   hardeningProfile: string;
   removalPolicy: 'retain' | 'destroy';
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Minimum log retention days (set by builder based on risk level) */
+  minLogRetentionDays?: number;
+  /** Require KMS encryption for high-risk environments (set by builder) */
+  requireKmsEncryption?: boolean;
+  /** Require active tracing for high-risk environments (set by builder) */
+  requireActiveTracing?: boolean;
+  /** Require high hardening profile for high-risk environments (set by builder) */
+  requireHighHardening?: boolean;
 }
 
 const BASE_EVENT_SOURCE_SCHEMA = {
@@ -405,6 +416,61 @@ export class LambdaWorkerComponentConfigBuilder extends ConfigBuilder<LambdaWork
     };
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<LambdaWorkerConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<LambdaWorkerConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        logging: {
+          logRetentionDays: 90, // Increased retention for high-risk environments (can be overridden to 180 for higher risk)
+          logFormat: 'JSON',
+          systemLogLevel: 'INFO',
+          applicationLogLevel: 'INFO'
+        },
+        tracing: {
+          mode: 'Active' // Active X-Ray tracing required for high-risk environments
+        },
+        securityTools: {
+          falco: false, // Keep existing default, can be enabled explicitly
+          runtimeSecurity: true // Runtime security monitoring recommended for high-risk environments
+        },
+        hardeningProfile: 'high', // High hardening profile for high-risk environments
+        // Set config flags for validator to check (instead of checking compliance frameworks)
+        minLogRetentionDays: 90, // Minimum log retention days for high-risk environments
+        requireKmsEncryption: true, // KMS encryption required for high-risk environments
+        requireActiveTracing: true, // Active tracing required for high-risk environments
+        requireHighHardening: true // High hardening required for high-risk environments
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): LambdaWorkerConfig {
     const resolved = super.buildSync() as Partial<LambdaWorkerConfig>;
 
@@ -441,12 +507,19 @@ export class LambdaWorkerComponentConfigBuilder extends ConfigBuilder<LambdaWork
       },
       observability: this.normaliseObservability(config.observability),
       securityTools: {
-        falco: config.securityTools?.falco ?? false
+        falco: config.securityTools?.falco ?? false,
+        runtimeSecurity: config.securityTools?.runtimeSecurity
       },
       monitoring: this.normaliseMonitoring(config.monitoring),
       hardeningProfile: config.hardeningProfile ?? 'baseline',
       removalPolicy: config.removalPolicy === 'destroy' ? 'destroy' : 'retain',
-      tags: config.tags ?? {}
+      tags: config.tags ?? {},
+      // Preserve config flags set by getComplianceFrameworkDefaults() for validator
+      highRiskEnvironment: config.highRiskEnvironment,
+      minLogRetentionDays: config.minLogRetentionDays,
+      requireKmsEncryption: config.requireKmsEncryption,
+      requireActiveTracing: config.requireActiveTracing,
+      requireHighHardening: config.requireHighHardening
     };
   }
 

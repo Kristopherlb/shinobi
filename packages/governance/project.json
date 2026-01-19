@@ -1,0 +1,36 @@
+{
+  "name": "@shinobi/governance",
+  "root": "packages/governance",
+  "sourceRoot": "packages/governance/src",
+  "projectType": "library",
+  "implicitDependencies": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "main": "src/index.ts",
+        "outputPath": "dist/packages/governance",
+        "tsConfig": "packages/governance/tsconfig.lib.json",
+        "generatePackageJson": true
+      },
+      "outputs": ["{options.outputPath}"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/governance/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "config": "packages/governance/vitest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": ["scope:shinobi", "type:governance"]
+}
+
+

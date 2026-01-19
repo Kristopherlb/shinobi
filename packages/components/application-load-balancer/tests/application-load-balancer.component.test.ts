@@ -1,12 +1,10 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
-import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component.js';
-import { ApplicationLoadBalancerComponentConfigBuilder } from '../src/application-load-balancer.builder.js';
-
-const VPC_CONTEXT_KEY = 'vpcProvider:account=123456789012:filter.vpcId=vpc-0000:region=us-east-1';
+import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component';
+import { ApplicationLoadBalancerComponentConfigBuilder } from '../src/application-load-balancer.builder';
 
 const createContext = (framework = 'commercial', scope?: Stack) => ({
   serviceName: 'checkout-service',
@@ -27,61 +25,22 @@ describe('ApplicationLoadBalancerComponent__Synthesis__ResourceValidation', () =
   let app: App;
   let stack: Stack;
   let context;
-  let loadPlatformConfigSpy: jest.SpiedFunction<ApplicationLoadBalancerComponentConfigBuilder['_loadPlatformConfiguration']>;
-  const originalContextJson = process.env.CDK_CONTEXT_JSON;
-
-  beforeAll(() => {
-    process.env.CDK_CONTEXT_JSON = JSON.stringify({
-      [VPC_CONTEXT_KEY]: {
-        vpcId: 'vpc-0000',
-        ownerAccountId: '123456789012',
-        availabilityZones: ['us-east-1a', 'us-east-1b'],
-        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
-        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
-        publicSubnetRouteTableIds: ['rtb-public-a', 'rtb-public-b'],
-        privateSubnetRouteTableIds: ['rtb-private-a', 'rtb-private-b']
-      }
-    });
-  });
-
-  afterAll(() => {
-    if (originalContextJson === undefined) {
-      delete process.env.CDK_CONTEXT_JSON;
-    } else {
-      process.env.CDK_CONTEXT_JSON = originalContextJson;
-    }
-  });
+  let vpc: ec2.IVpc;
+  let loadPlatformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     app = new App();
     stack = new Stack(app, 'AlbTestStack', {
       env: { account: '123456789012', region: 'us-east-1' }
     });
+    // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+    vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
     context = createContext('commercial', stack);
+    context.vpc = vpc;
 
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(ApplicationLoadBalancerComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
-      .mockImplementation(function () {
-        const framework = this.builderContext.context.complianceFramework;
-        if (framework === 'fedramp-high') {
-          return {
-            scheme: 'internal',
-            deletionProtection: true,
-            accessLogs: { enabled: true, retentionDays: 365, removalPolicy: 'retain' },
-            listeners: [{ port: 443, protocol: 'HTTPS' }],
-            monitoring: { enabled: true }
-          };
-        }
-
-        return {
-          scheme: 'internet-facing',
-          deletionProtection: false,
-          ipAddressType: 'ipv4',
-          accessLogs: { enabled: true, retentionDays: 90 },
-          listeners: [{ port: 80, protocol: 'HTTP' }],
-          monitoring: { enabled: true }
-        };
-      });
+      .mockImplementation(() => ({})); // Return empty - defaults come from getComplianceFrameworkDefaults
   });
 
   afterEach(() => {
@@ -90,7 +49,8 @@ describe('ApplicationLoadBalancerComponent__Synthesis__ResourceValidation', () =
 
   const synthesize = (specOverrides = {}, contextOverrides = {}) => {
     const ctx = { ...context, ...contextOverrides };
-    const spec = createSpec({ vpc: { vpcId: 'vpc-0000' }, ...specOverrides });
+    // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
+    const spec = createSpec(specOverrides);
     const component = new ApplicationLoadBalancerComponent(stack, spec.name, ctx, spec);
     component.synth();
     return { component, template: Template.fromStack(stack) };
@@ -105,7 +65,7 @@ describe('ApplicationLoadBalancerComponent__Synthesis__ResourceValidation', () =
    *   "oracle": "contract",
    *   "invariants": ["Scheme is internet-facing", "Type application"],
    *   "fixtures": ["cdk.Stack", "ApplicationLoadBalancerComponent"],
-   *   "inputs": { "shape": "Commercial framework", "notes": "VPC resolved via context provider" },
+   *   "inputs": { "shape": "Commercial framework", "notes": "VPC injected via context.vpc" },
    *   "risks": ["Incorrect load balancer scheme"],
    *   "dependencies": ["aws-cdk-lib"],
    *   "evidence": ["Scheme=internet-facing"],
@@ -169,8 +129,10 @@ describe('ApplicationLoadBalancerComponent__Synthesis__ResourceValidation', () =
    * }
    */
   it('LoadBalancerAttributes__FedrampHigh__EnablesDeletionProtection', () => {
+    // Set highRiskEnvironment flag for high-risk environments (data-driven, not framework-dependent)
     const { template } = synthesize(
       {
+        highRiskEnvironment: true,
         listeners: [
           {
             port: 443,
@@ -208,8 +170,10 @@ describe('ApplicationLoadBalancerComponent__Synthesis__ResourceValidation', () =
    * }
    */
   it('AccessLogsBucket__FedrampHigh__ConfiguresRetentionPolicy', () => {
+    // Set highRiskEnvironment flag for high-risk environments (data-driven, not framework-dependent)
     const { template } = synthesize(
       {
+        highRiskEnvironment: true,
         listeners: [
           {
             port: 443,
@@ -278,13 +242,17 @@ describe('ApplicationLoadBalancerComponent__Synthesis__ResourceValidation', () =
    * }
    */
   it('Validation__MissingVpc__ThrowsExplicitError', () => {
+    // Create context without VPC for this test
+    const contextWithoutVpc = { ...context };
+    delete contextWithoutVpc.vpc;
+    
     const component = new ApplicationLoadBalancerComponent(
       stack,
       'InvalidAlb',
-      context,
+      contextWithoutVpc,
       createSpec({})
     );
 
-    expect(() => component.synth()).toThrow('requires `config.vpc.vpcId`');
+    expect(() => component.synth()).toThrow('Application Load Balancer component requires `config.vpc.vpcId` or a VPC provided via context.vpc; default VPC lookup is no longer supported.');
   });
 });

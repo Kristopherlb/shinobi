@@ -581,7 +581,7 @@ export class S3BucketComponent extends BaseComponent {
     if (this.config.compliance?.auditLogging) {
       this.advancedFeatures.configureCompliance({
         enabled: true,
-        frameworks: [this.context.complianceFramework || 'commercial'],
+        frameworks: [this.config.compliance?.framework || 'commercial'],
         validationRules: ['encryption', 'access-logging', 'versioning'],
         reporting: true
       });

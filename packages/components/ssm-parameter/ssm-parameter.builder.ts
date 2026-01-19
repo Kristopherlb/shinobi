@@ -30,6 +30,8 @@ export interface SsmParameterComponentConfig {
   dataType: SsmParameterDataType;
   encryption: SsmParameterEncryptionConfig;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const CUSTOMER_MANAGED_KEY_SCHEMA: ComponentConfigSchema = {
@@ -104,6 +106,49 @@ export class SsmParameterComponentConfigBuilder extends ConfigBuilder<SsmParamet
 
   protected getHardcodedFallbacks(): Partial<SsmParameterComponentConfig> {
     return DEFAULT_CONFIG;
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<SsmParameterComponentConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<SsmParameterComponentConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        encryption: {
+          customerManagedKey: {
+            enabled: true,
+            rotationEnabled: true,
+            allowSsmService: true
+          }
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): SsmParameterComponentConfig {

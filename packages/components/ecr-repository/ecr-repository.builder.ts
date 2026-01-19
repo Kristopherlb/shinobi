@@ -63,6 +63,8 @@ export interface EcrRepositoryConfig {
 
   /** Tags for the repository */
   tags?: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 /**
@@ -135,80 +137,60 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
    * Layer 2: Compliance Framework Defaults
    * Security and compliance-specific configurations loaded from platform config
    */
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
   protected getComplianceFrameworkDefaults(): Partial<EcrRepositoryConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-
-    switch (framework) {
-      case 'fedramp-high':
-        return {
-          imageScanningConfiguration: {
-            scanOnPush: true
-          },
-          imageTagMutability: 'IMMUTABLE',
-          encryption: {
-            encryptionType: 'KMS'
-          },
-          monitoring: {
-            enabled: true,
-            detailedMetrics: true,
-            logRetentionDays: 365,
-            alarms: {
-              pushRateThreshold: 25,
-              sizeThreshold: 5 * 1024 * 1024 * 1024 // 5 GiB
-            }
-          },
-          compliance: {
-            retentionPolicy: 'retain',
-            auditLogging: true
-          }
-        };
-      case 'fedramp-moderate':
-        return {
-          imageScanningConfiguration: {
-            scanOnPush: true
-          },
-          imageTagMutability: 'IMMUTABLE',
-          encryption: {
-            encryptionType: 'KMS'
-          },
-          monitoring: {
-            enabled: true,
-            detailedMetrics: true,
-            logRetentionDays: 180,
-            alarms: {
-              pushRateThreshold: 40,
-              sizeThreshold: 7 * 1024 * 1024 * 1024 // 7 GiB
-            }
-          },
-          compliance: {
-            retentionPolicy: 'retain',
-            auditLogging: true
-          }
-        };
-      default:
-        return {
-          imageScanningConfiguration: {
-            scanOnPush: true
-          },
-          imageTagMutability: 'IMMUTABLE',
-          encryption: {
-            encryptionType: 'AES256'
-          },
-          monitoring: {
-            enabled: true,
-            detailedMetrics: false,
-            logRetentionDays: 90,
-            alarms: {
-              pushRateThreshold: 50,
-              sizeThreshold: 10 * 1024 * 1024 * 1024
-            }
-          },
-          compliance: {
-            retentionPolicy: 'destroy',
-            auditLogging: false
-          }
-        };
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<EcrRepositoryConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        imageScanningConfiguration: {
+          scanOnPush: true
+        },
+        imageTagMutability: 'IMMUTABLE',
+        encryption: {
+          encryptionType: 'KMS'
+        },
+        monitoring: {
+          enabled: true,
+          detailedMetrics: true,
+          logRetentionDays: 365,
+          alarms: {
+            pushRateThreshold: 25,
+            sizeThreshold: 5 * 1024 * 1024 * 1024 // 5 GiB
+          }
+        },
+        compliance: {
+          retentionPolicy: 'retain',
+          auditLogging: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   /**

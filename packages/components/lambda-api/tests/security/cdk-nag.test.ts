@@ -1,7 +1,7 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { LambdaApiComponent } from '../../src/lambda-api.component.js';
+import { LambdaApiComponent } from '../../src/lambda-api.component';
 
 describe.skip('LambdaApiComponent CDK Nag Integration', () => {
   const createContext = (

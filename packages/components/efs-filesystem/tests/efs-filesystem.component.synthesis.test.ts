@@ -1,11 +1,9 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { EfsFilesystemComponent } from '../src/efs-filesystem.component.js';
-import { EfsFilesystemConfig } from '../src/efs-filesystem.builder.js';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { EfsFilesystemComponent } from '../src/efs-filesystem.component';
+import { EfsFilesystemConfig } from '../src/efs-filesystem.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-
-const VPC_ID = 'vpc-0abc123def4567890';
-const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
 
 const createContext = (framework?: string): ComponentContext => {
   const fw = framework || 'commercial';
@@ -48,37 +46,21 @@ const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => 
 };
 
 describe('EfsFilesystemComponent synthesis', () => {
-  const originalContext = process.env.CDK_CONTEXT_JSON;
-
-  beforeAll(() => {
-    process.env.CDK_CONTEXT_JSON = JSON.stringify({
-      [CONTEXT_KEY]: {
-        vpcId: VPC_ID,
-        availabilityZones: ['us-east-1a', 'us-east-1b'],
-        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
-        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
-        isolatedSubnetIds: [],
-        ownerAccountId: '123456789012',
-        region: 'us-east-1',
-        routeTableIds: ['rtb-1', 'rtb-2'],
-        subnetGroups: {}
-      }
-    });
-  });
-
-  afterAll(() => {
-    if (originalContext === undefined) {
-      delete process.env.CDK_CONTEXT_JSON;
-    } else {
-      process.env.CDK_CONTEXT_JSON = originalContext;
-    }
-  });
 
   it('synthesises a commercial filesystem with custom security group', () => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+    const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
+    const context = createContext('commercial');
+    context.vpc = vpc;
+
     const spec = createSpec({
       vpc: {
         enabled: true,
-        vpcId: VPC_ID,
+        // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
         subnetIds: ['subnet-private-a', 'subnet-private-b'],
         securityGroup: {
           create: true,
@@ -104,7 +86,9 @@ describe('EfsFilesystemComponent synthesis', () => {
       }
     });
 
-    const { component, template } = synthesizeComponent(createContext('commercial'), spec);
+    const component = new EfsFilesystemComponent(stack, spec.name, context, spec);
+    component.synth();
+    const template = Template.fromStack(stack);
 
     template.hasResourceProperties('AWS::EFS::FileSystem', {
       PerformanceMode: 'generalPurpose',
@@ -139,10 +123,19 @@ describe('EfsFilesystemComponent synthesis', () => {
   });
 
   it('enables monitoring and logging when requested', () => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+    const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
+    const context = createContext('commercial');
+    context.vpc = vpc;
+
     const spec = createSpec({
       vpc: {
         enabled: true,
-        vpcId: VPC_ID,
+        // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
         subnetIds: ['subnet-private-a', 'subnet-private-b'],
         securityGroup: {
           create: false,
@@ -182,7 +175,9 @@ describe('EfsFilesystemComponent synthesis', () => {
       }
     });
 
-    const { template } = synthesizeComponent(createContext('commercial'), spec);
+    const component = new EfsFilesystemComponent(stack, spec.name, context, spec);
+    component.synth();
+    const template = Template.fromStack(stack);
 
     template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
       RetentionInDays: 180
@@ -196,10 +191,19 @@ describe('EfsFilesystemComponent synthesis', () => {
   });
 
   it('honours fedramp-high defaults', () => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+    const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
+    const context = createContext('fedramp-high');
+    context.vpc = vpc;
+
     const spec = createSpec({
       vpc: {
         enabled: true,
-        vpcId: VPC_ID,
+        // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
         subnetIds: ['subnet-private-a', 'subnet-private-b'],
         securityGroup: {
           create: true
@@ -207,7 +211,9 @@ describe('EfsFilesystemComponent synthesis', () => {
       }
     });
 
-    const { template } = synthesizeComponent(createContext('fedramp-high'), spec);
+    const component = new EfsFilesystemComponent(stack, spec.name, context, spec);
+    component.synth();
+    const template = Template.fromStack(stack);
 
     template.hasResourceProperties('AWS::EFS::FileSystem', Match.objectLike({
       Encrypted: true,

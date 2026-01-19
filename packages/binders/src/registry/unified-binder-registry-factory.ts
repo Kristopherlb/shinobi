@@ -17,7 +17,7 @@
  * ```typescript
  * import { createUnifiedBinderRegistry } from '@shinobi/binders';
  * 
- * const registry = await createUnifiedBinderRegistry();
+ * const registry = createUnifiedBinderRegistry();
  * // Registry now contains all discovered binder strategies
  * ```
  */
@@ -25,6 +25,7 @@
 import { UnifiedBinderRegistry } from '@shinobi/core';
 import { UnifiedBinderStrategyBase } from '@shinobi/core';
 import type { IUnifiedBinderStrategy } from '@shinobi/core';
+import * as AllBinders from '../all-binder-strategies.js';
 
 /**
  * Create a UnifiedBinderRegistry with all discovered binder strategies
@@ -35,9 +36,7 @@ import type { IUnifiedBinderStrategy } from '@shinobi/core';
  * 
  * @returns UnifiedBinderRegistry instance with all discovered strategies registered
  */
-export async function createUnifiedBinderRegistry(): Promise<UnifiedBinderRegistry> {
-  // Dynamic import - prevents TypeScript from resolving binders source during compilation
-  const AllBinders = await import('@shinobi/binders');
+export function createUnifiedBinderRegistry(): UnifiedBinderRegistry {
   const discoveredStrategies: IUnifiedBinderStrategy[] = [];
   
   // Iterate through all exports from @shinobi/binders namespace
@@ -72,32 +71,28 @@ export async function createUnifiedBinderRegistry(): Promise<UnifiedBinderRegist
       // Verify it implements IUnifiedBinderStrategy interface
       // Check for required properties/methods
       if (!strategy.supportedCapabilities || !Array.isArray(strategy.supportedCapabilities)) {
-        console.warn(
-          `[BinderFactory] Skipping ${key}: missing or invalid supportedCapabilities property`
-        );
+        // eslint-disable-next-line no-console
+        console.warn(`[BinderFactory] Skipping ${key}: missing or invalid supportedCapabilities property`);
         continue;
       }
       
       if (typeof strategy.canHandle !== 'function') {
-        console.warn(
-          `[BinderFactory] Skipping ${key}: missing canHandle method`
-        );
+        // eslint-disable-next-line no-console
+        console.warn(`[BinderFactory] Skipping ${key}: missing canHandle method`);
         continue;
       }
       
       if (typeof strategy.getCompatibilityMatrix !== 'function') {
-        console.warn(
-          `[BinderFactory] Skipping ${key}: missing getCompatibilityMatrix method`
-        );
+        // eslint-disable-next-line no-console
+        console.warn(`[BinderFactory] Skipping ${key}: missing getCompatibilityMatrix method`);
         continue;
       }
       
       discoveredStrategies.push(strategy);
     } catch (error) {
       // Defensive error handling - log warning but continue discovery
-      console.warn(
-        `[BinderFactory] Failed to instantiate ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      // eslint-disable-next-line no-console
+      console.warn(`[BinderFactory] Failed to instantiate ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       continue;
     }
   }

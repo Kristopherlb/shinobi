@@ -1,8 +1,9 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Construct } from 'constructs';
 import {
   EventBridgeRuleCronComponentConfigBuilder,
   EventBridgeRuleCronConfig
-} from '../eventbridge-rule-cron.builder.js';
+} from '../eventbridge-rule-cron.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';

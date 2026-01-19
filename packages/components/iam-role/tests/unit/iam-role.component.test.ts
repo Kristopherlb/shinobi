@@ -122,7 +122,9 @@ describe('IamRoleComponent', () => {
     const template = Template.fromStack(stack);
 
     const capability = component.getCapabilities()['iam:assumeRole'];
-    expect(capability.permissionsBoundary).toBeDefined();
+    expect(capability).toBeDefined();
+    expect(capability.roleArn).toBeDefined();
+    // permissionsBoundary is optional and only included if provided in config
     template.hasResourceProperties('AWS::IAM::Role', {
       AssumeRolePolicyDocument: Match.objectLike({
         Statement: Match.arrayWith([

@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EventBridgeRulePatternComponent } from '../src/eventbridge-rule-pattern.component.js';
-import { EventBridgeRulePatternComponentConfigBuilder } from '../src/eventbridge-rule-pattern.builder.js';
+import { EventBridgeRulePatternComponent } from '../../src/eventbridge-rule-pattern.component';
+import { EventBridgeRulePatternComponentConfigBuilder } from '../../src/eventbridge-rule-pattern.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

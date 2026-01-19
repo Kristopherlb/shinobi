@@ -1,9 +1,10 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EventBridgeRuleCronComponent } from '../eventbridge-rule-cron.component.js';
-import { EventBridgeRuleCronConfig } from '../eventbridge-rule-cron.builder.js';
+import { EventBridgeRuleCronComponent } from '../eventbridge-rule-cron.component';
+import { EventBridgeRuleCronConfig } from '../eventbridge-rule-cron.builder';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
@@ -57,7 +58,7 @@ describe('EventBridgeRuleCronComponent synthesis', () => {
 
     template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
     template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
-      RetentionInDays: 365
+      RetentionInDays: 3653
     }));
 
     const capability = component.getCapabilityData()['eventbridge:rule-cron'];

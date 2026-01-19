@@ -78,11 +78,7 @@ advanced security mode, and tighter throttling thresholds.
 ## Testing
 
 ```bash
-corepack pnpm exec jest --runTestsByPath \
-  packages/components/cognito-user-pool/tests/cognito-user-pool.builder.test.ts \
-  packages/components/cognito-user-pool/tests/cognito-user-pool.component.synthesis.test.ts
-corepack pnpm exec jest --runTestsByPath \
-  packages/components/cognito-user-pool/tests/security/cdk-nag.test.ts
+pnpm nx test @shinobi/components-cognito-user-pool
 ```
 
 The builder tests validate platform-default posture per framework and manifest

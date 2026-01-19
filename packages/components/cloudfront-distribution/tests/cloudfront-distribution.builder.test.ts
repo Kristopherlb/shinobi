@@ -3,10 +3,11 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import {
   CloudFrontDistributionComponentConfigBuilder,
   CloudFrontDistributionConfig
-} from '../src/cloudfront-distribution.builder.js';
+} from '../src/cloudfront-distribution.builder';
 import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 // Deterministic test fixtures
@@ -36,12 +37,12 @@ const createMockSpec = (config: Partial<CloudFrontDistributionConfig> = {}): Com
 describe('CloudFrontDistributionComponentConfigBuilder', () => {
   // Freeze time for deterministic tests
   beforeAll(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
+    vi.useFakeTimers();
+    vi.setSystemTime(DETERMINISTIC_TIMESTAMP);
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('ConfigurationBuilder__CommercialFramework__AppliesPlatformDefaults', () => {

@@ -1,25 +1,28 @@
-import { App, Stack } from 'aws-cdk-lib';
+import { Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { createTestApp, createMockedServices } from '../../../core/src/platform/contracts/__tests__/test-helpers.js';
 
-import { SsmParameterComponent } from '../ssm-parameter.component.js';
+import { SsmParameterComponent } from '../ssm-parameter.component';
 
 const createContext = (
+  stack: Stack,
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial'
 ): ComponentContext => ({
   serviceName: 'orders',
   environment: 'dev',
   complianceFramework: framework,
-  scope: new Stack(),
+  scope: stack,
   region: 'us-east-1',
   accountId: '123456789012'
 });
 
 describe('SsmParameterComponent synthesis', () => {
   it('creates a basic string parameter', () => {
-    const app = new App();
+    const app = createTestApp();
     const stack = new Stack(app, 'Basic');
-    const context = createContext('commercial');
+    const context = createContext(stack, 'commercial');
+    const mockedServices = createMockedServices();
     const spec: ComponentSpec = {
       name: 'orders-config',
       type: 'ssm-parameter',
@@ -30,7 +33,7 @@ describe('SsmParameterComponent synthesis', () => {
       }
     };
 
-    const component = new SsmParameterComponent(stack, spec.name, context, spec);
+    const component = new SsmParameterComponent(stack, spec.name, context, spec, mockedServices);
     component.synth();
 
     const template = Template.fromStack(stack);
@@ -45,9 +48,10 @@ describe('SsmParameterComponent synthesis', () => {
   });
 
   it('creates a string list parameter from values array', () => {
-    const app = new App();
+    const app = createTestApp();
     const stack = new Stack(app, 'List');
-    const context = createContext('commercial');
+    const context = createContext(stack, 'commercial');
+    const mockedServices = createMockedServices();
     const spec: ComponentSpec = {
       name: 'orders-features',
       type: 'ssm-parameter',
@@ -58,7 +62,7 @@ describe('SsmParameterComponent synthesis', () => {
       }
     };
 
-    const component = new SsmParameterComponent(stack, spec.name, context, spec);
+    const component = new SsmParameterComponent(stack, spec.name, context, spec, mockedServices);
     component.synth();
 
     const template = Template.fromStack(stack);
@@ -73,9 +77,10 @@ describe('SsmParameterComponent synthesis', () => {
   });
 
   it('creates secure string parameter with customer-managed key when requested', () => {
-    const app = new App();
+    const app = createTestApp();
     const stack = new Stack(app, 'Secure');
-    const context = createContext('fedramp-high');
+    const context = createContext(stack, 'fedramp-high');
+    const mockedServices = createMockedServices();
     const spec: ComponentSpec = {
       name: 'orders-secret',
       type: 'ssm-parameter',
@@ -93,7 +98,7 @@ describe('SsmParameterComponent synthesis', () => {
       }
     };
 
-    const component = new SsmParameterComponent(stack, spec.name, context, spec);
+    const component = new SsmParameterComponent(stack, spec.name, context, spec, mockedServices);
     component.synth();
 
     const template = Template.fromStack(stack);

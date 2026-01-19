@@ -2,14 +2,19 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { LambdaApiComponent } from '../src/lambda-api.component.js';
-import { LambdaApiConfig } from '../src/lambda-api.builder.js';
+import { LambdaApiComponent } from '../src/lambda-api.component';
+import { LambdaApiConfig } from '../src/lambda-api.builder';
 
 const createContext = (
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'
 ): ComponentContext => {
   const app = new App();
-  const stack = new Stack(app, `Test-${framework}`);
+  const stack = new Stack(app, `Test-${framework}`, {
+    env: {
+      account: '123456789012',
+      region: 'us-east-1'
+    }
+  });
 
   return {
     serviceName: 'billing',
@@ -74,7 +79,12 @@ describe('LambdaApiComponent synthesis', () => {
     const context = createContext('fedramp-high');
     const spec = createSpec({
       vpc: {
-        enabled: false
+        enabled: true,
+        subnetIds: ['subnet-test-123'], // Required for VPC
+        securityGroupIds: ['sg-test-123'] // Required for VPC
+      },
+      encryption: {
+        enabled: true // Required for FedRAMP High
       },
       api: {
         usagePlan: {

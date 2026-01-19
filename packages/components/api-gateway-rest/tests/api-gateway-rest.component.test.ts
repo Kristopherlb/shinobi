@@ -1,9 +1,9 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 
-import { ApiGatewayRestComponent } from '../src/api-gateway-rest.component.js';
-import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder.js';
+import { ApiGatewayRestComponent } from '../src/api-gateway-rest.component';
+import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder';
 
 const createContext = (framework = 'commercial', scope?: Stack) => ({
   serviceName: 'test-service',
@@ -24,7 +24,7 @@ describe('ApiGatewayRestComponent__Synthesis__RestApiResources', () => {
   let app: App;
   let stack: Stack;
   let context: ReturnType<typeof createContext>;
-  let loadPlatformConfigSpy: jest.SpiedFunction<ApiGatewayRestConfigBuilder['_loadPlatformConfiguration']>;
+  let loadPlatformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     app = new App();
@@ -33,7 +33,7 @@ describe('ApiGatewayRestComponent__Synthesis__RestApiResources', () => {
     });
     context = createContext('commercial', stack);
 
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(ApiGatewayRestConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;

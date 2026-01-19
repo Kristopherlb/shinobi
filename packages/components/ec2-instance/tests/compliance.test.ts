@@ -1,7 +1,8 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { Ec2InstanceComponent } from '../ec2-instance.component.js';
-import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder.js';
+import { Ec2InstanceComponent } from '../ec2-instance.component';
+import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder';
 
 const createContext = (framework, scope) => ({
   serviceName: 'test-service',
@@ -29,27 +30,35 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
       env: { account: '123456789012', region: 'us-east-1' }
     });
     context = createContext('commercial', stack);
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(Ec2InstanceComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;
         if (framework === 'fedramp-moderate') {
           return {
+            highRiskEnvironment: true,
             storage: { encrypted: true, rootVolumeSize: 50 },
             monitoring: { detailed: true, cloudWatchAgent: true },
-            security: { requireImdsv2: true, httpTokens: 'required' }
+            security: { requireImdsv2: true, httpTokens: 'required' },
+            enableStigCompliance: true
           };
         }
 
         if (framework === 'fedramp-high') {
           return {
+            highRiskEnvironment: true,
             storage: { encrypted: true, rootVolumeType: 'io2', iops: 1000 },
             monitoring: { detailed: true, cloudWatchAgent: true },
-            security: { requireImdsv2: true, httpTokens: 'required', nitroEnclaves: true }
+            security: { requireImdsv2: true, httpTokens: 'required', nitroEnclaves: true },
+            enableStigCompliance: true,
+            enableImmutableInfrastructure: true
           };
         }
 
-        return {};
+        // Commercial: explicitly set encrypted: false to prevent KMS key creation
+        return {
+          storage: { encrypted: false }
+        };
       });
   });
 

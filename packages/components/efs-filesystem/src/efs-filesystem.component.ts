@@ -105,16 +105,23 @@ export class EfsFilesystemComponent extends BaseComponent {
 
   private resolveVpc(): void {
     if (!this.config?.vpc.enabled) {
-      throw new Error('EFS filesystem requires vpc configuration. Provide `config.vpc.vpcId` and subnet IDs.');
+      throw new Error('EFS filesystem requires vpc configuration. Provide `config.vpc.vpcId` and subnet IDs, or a VPC provided via context.vpc.');
     }
 
-    if (!this.config.vpc.vpcId) {
-      throw new Error('EFS filesystem requires `config.vpc.vpcId` to be set.');
+    // Priority 1: Use injected VPC from context (preferred for tests)
+    if (this.context.vpc) {
+      this.vpc = this.context.vpc;
+      return;
     }
-
-    this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-      vpcId: this.config.vpc.vpcId
-    });
+    // Priority 2: Use fromLookup() if vpcId provided in config
+    if (this.config.vpc.vpcId) {
+      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
+        vpcId: this.config.vpc.vpcId
+      });
+      return;
+    }
+    // Priority 3: Error if neither provided
+    throw new Error('EFS filesystem requires `config.vpc.vpcId` to be set, or a VPC provided via context.vpc.');
   }
 
   private resolveSecurityGroup(): void {
@@ -243,18 +250,16 @@ export class EfsFilesystemComponent extends BaseComponent {
   }
 
   /**
-   * Get KMS key for log encryption (required for FedRAMP)
+   * Get KMS key for log encryption (required for high-risk environments)
    */
   private getLogEncryptionKey(): kms.IKey | undefined {
-    const framework = this.context.complianceFramework;
-
-    // Commercial environments use AWS-managed encryption (default)
-    if (!framework || framework === 'commercial') {
+    // Use config value - set by builder based on risk level
+    if (!this.config?.useCustomerManagedKeyForLogs) {
       return undefined;
     }
 
-    // FedRAMP requires customer-managed CMK
-    if (framework.startsWith('fedramp')) {
+    // High-risk environments require customer-managed CMK
+    if (this.config?.useCustomerManagedKeyForLogs) {
       if (this.logEncryptionKey) {
         return this.logEncryptionKey;
       }
@@ -279,7 +284,7 @@ export class EfsFilesystemComponent extends BaseComponent {
       this.applyStandardTags(key, {
         'resource-type': 'kms-key',
         'purpose': 'log-encryption',
-        'compliance-framework': framework
+        'compliance-framework': this.context.complianceFramework
       });
 
       this.logEncryptionKey = key;

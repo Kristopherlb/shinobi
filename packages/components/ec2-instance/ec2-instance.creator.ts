@@ -160,21 +160,15 @@ export class Ec2InstanceComponentCreator implements IComponentCreator {
         errors.push('Detailed monitoring must be enabled in production environment');
       }
 
-      if (context.complianceFramework === 'fedramp-moderate' || context.complianceFramework === 'fedramp-high') {
+      // High-risk environment validations (set via config or platform config)
+      if (config?.highRiskEnvironment) {
         if (!config?.storage?.encrypted) {
-          errors.push('EBS encryption must be enabled for FedRAMP compliance');
+          errors.push('EBS encryption must be enabled for high-risk environments');
         }
 
         if (!config?.security?.requireImdsv2) {
-          errors.push('IMDSv2 must be required for FedRAMP compliance');
+          errors.push('IMDSv2 must be required for high-risk environments');
         }
-      }
-    }
-
-    // Compliance framework validations
-    if (context.complianceFramework === 'fedramp-high') {
-      if (!config?.security?.nitroEnclaves) {
-        errors.push('Nitro Enclaves must be enabled for FedRAMP High compliance');
       }
     }
 

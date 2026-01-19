@@ -276,6 +276,29 @@ export class SecurityGroupRulePostProcessor {
     group: SecurityGroupRuleGroup,
     components: any[]
   ): boolean {
+    // If we weren't given any components, fall back to a conservative heuristic:
+    // - If the target SG id looks like a CloudFormation token, assume SAME-STACK
+    // - If it's a literal "sg-..." id, assume CROSS-STACK (since it's not resolvable in this stack)
+    if (!components || components.length === 0) {
+      const targetId = String(group.targetSecurityGroupId);
+      const looksLikeToken =
+        targetId.includes('${Token[') ||
+        targetId.includes('${AWS::') ||
+        targetId.includes('Fn::') ||
+        targetId.includes('Ref');
+
+      if (looksLikeToken) {
+        return false;
+      }
+
+      if (/^sg-[0-9A-Za-z-]+$/.test(targetId)) {
+        return true;
+      }
+
+      // Default safe behavior: treat unknown formats as cross-stack.
+      return true;
+    }
+
     // Check if target security group exists in any component's capabilities
     for (const component of components) {
       const capabilities = component.getCapabilities?.() || {};

@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EventBridgeRuleCronComponent } from '../eventbridge-rule-cron.component.js';
-import { EventBridgeRuleCronComponentConfigBuilder } from '../eventbridge-rule-cron.builder.js';
+import { EventBridgeRuleCronComponent } from '../../eventbridge-rule-cron.component';
+import { EventBridgeRuleCronComponentConfigBuilder } from '../../eventbridge-rule-cron.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

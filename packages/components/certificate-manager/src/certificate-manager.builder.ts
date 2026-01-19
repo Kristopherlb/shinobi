@@ -100,6 +100,64 @@ export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<Cert
     };
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<CertificateManagerConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<CertificateManagerConfig> | undefined;
+    let isHighRisk = (componentConfig as any)?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        logging: {
+          groups: [
+            {
+              id: 'lifecycle',
+              enabled: true,
+              retentionInDays: 1095, // 3 years for high-risk environments
+              removalPolicy: 'retain'
+            }
+          ]
+        },
+        monitoring: {
+          enabled: true,
+          expiration: {
+            ...DEFAULT_EXPIRATION_ALARM,
+            thresholdDays: 45, // Longer lead time for high-risk environments
+            threshold: 45
+          },
+          status: {
+            ...DEFAULT_STATUS_ALARM,
+            evaluationPeriods: 5 // More evaluation periods for high-risk
+          }
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): CertificateManagerConfig {
     const resolved = super.buildSync() as CertificateManagerConfig;
     if (!resolved.domainName) {

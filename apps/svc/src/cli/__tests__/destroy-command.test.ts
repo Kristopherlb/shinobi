@@ -4,7 +4,7 @@ import os from 'os';
 import { DestroyCommand } from '../destroy-command.js';
 import type { DestroyOptions } from '../destroy-command.js';
 import type { Logger } from '../console-logger.js';
-import type { FileDiscovery } from '@shinobi/core';
+import type { FileDiscovery, RollbackCleanupService } from '@shinobi/core';
 
 vi.mock('../utils/service-synthesizer.js', () => ({
   readManifest: vi.fn()
@@ -54,7 +54,17 @@ describe('DestroyCommand', () => {
     findManifest: vi.fn()
   } as unknown as FileDiscovery;
 
-  const destroyCommand = new DestroyCommand({ fileDiscovery, logger });
+  const rollbackCleanup: RollbackCleanupService = {
+    getRetainedResourcesBeforeDeletion: vi.fn().mockResolvedValue([]),
+    cleanupRetainedResourcesAfterDeletion: vi.fn().mockResolvedValue({
+      stackInFailedState: false,
+      orphanedResources: [],
+      cleanedUp: 0,
+      errors: []
+    })
+  } as unknown as RollbackCleanupService;
+
+  const destroyCommand = new DestroyCommand({ fileDiscovery, logger, rollbackCleanup });
   const manifestPath = path.join(os.tmpdir(), 'service.yml');
   const baseOptions: DestroyOptions = {
     file: manifestPath,

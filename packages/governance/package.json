@@ -1,0 +1,26 @@
+{
+  "name": "@shinobi/governance",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "postbuild": "mkdir -p dist/schemas && cp src/schemas/audit-record.schema.json dist/schemas/audit-record.schema.json"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
+
+

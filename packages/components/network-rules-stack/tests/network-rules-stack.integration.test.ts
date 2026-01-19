@@ -32,7 +32,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComponentSpec, ComponentContext } from '@shinobi/core';
-import { NetworkRulesStackComponent } from '../src/network-rules-stack.component.js';
+import { NetworkRulesStackComponent } from '../src/network-rules-stack.component';
 import { CrossStackRuleManager } from '@shinobi/core';
 
 describe('NetworkRulesStackComponent__Integration', () => {
@@ -208,7 +208,7 @@ describe('NetworkRulesStackComponent__Integration', () => {
         PolicyDocument: {
           Statement: Match.arrayWith([
             Match.objectLike({
-              Action: 'ssm:GetParametersByPath',
+              Action: Match.arrayWith(['ssm:GetParametersByPath']),
               Resource: Match.stringLikeRegexp('/shinobi/network-rules')
             })
           ])

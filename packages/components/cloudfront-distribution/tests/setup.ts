@@ -1,5 +1,5 @@
 // Test setup file for CloudFront Distribution component
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import path from 'path';
 
 // Ensure process.cwd() during tests points at the repo root so shared configuration files resolve
@@ -9,15 +9,15 @@ if (process.cwd() !== repoRoot) {
 }
 
 // Mock the platform logger
-jest.mock('@shinobi/core-logger', () => ({
+vi.mock('@shinobi/core-logger', () => ({
   Logger: {
     getLogger: () => ({
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
     }),
-    setGlobalContext: jest.fn(),
+    setGlobalContext: vi.fn(),
   },
 }));
 

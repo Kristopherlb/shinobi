@@ -7,8 +7,8 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Stack, App } from 'aws-cdk-lib';
-import { SqsQueueComponent } from '../sqs-queue.component.js';
-import { SqsQueueConfigBuilder, SqsQueueConfig } from '../sqs-queue.builder.js';
+import { SqsQueueComponent } from '../sqs-queue.component';
+import { SqsQueueConfigBuilder, SqsQueueConfig } from '../sqs-queue.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Mock platform configuration loading to avoid requiring config files in tests

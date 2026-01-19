@@ -13,6 +13,12 @@
  *   node tests/smoke-test.js
  */
 
+if (process.env.RUN_SMOKE_TESTS !== 'true') {
+  // eslint-disable-next-line no-console
+  console.log('⏭️  Skipping smoke tests (set RUN_SMOKE_TESTS=true to run).');
+  process.exit(0);
+}
+
 import { CloudFormationClient, DescribeStacksCommand, DescribeStackResourcesCommand } from '@aws-sdk/client-cloudformation';
 import { APIGatewayClient, GetRestApiCommand, GetResourcesCommand } from '@aws-sdk/client-api-gateway';
 import { SQSClient, GetQueueAttributesCommand, GetQueueUrlCommand, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs';

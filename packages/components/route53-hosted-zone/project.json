@@ -1,0 +1,51 @@
+{
+  "name": "@shinobi/components-route53-hosted-zone",
+  "sourceRoot": "packages/components/route53-hosted-zone",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/route53-hosted-zone"
+      ],
+      "options": {
+        "command": "node_modules/.bin/tsc -b packages/components/route53-hosted-zone/tsconfig.json",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "commands": [
+          {
+            "command": "vitest run --config vitest.config.ts",
+            "forwardAllArgs": false
+          }
+        ],
+        "cwd": "{projectRoot}"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/route53-hosted-zone",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/route53-hosted-zone/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+

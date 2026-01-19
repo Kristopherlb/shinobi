@@ -1,6 +1,18 @@
 packages:
   - "packages/**"
   - "apps/**"
+  - "!apps/**/dist/**"
+  - "!dist/**"
+  # Removed directories (not in workspace):
+  # - apps/harmony (removed from project)
+  # - apps/harmony-web (removed from project)
+  # - apps/storybook-host (removed from project)
+  # - packages/ui (removed from project)
+  # - packages/ops-engine (removed from project)
+  # - packages/components/eks-* (removed from project)
+  # - packages/components/helm-release (removed from project)
+  # - packages/components/k8s-manifest (removed from project)
+  # - skills/harmony-activity-component-scaffolder (removed from project)
 
 onlyBuiltDependencies:
   - "@swc/core"

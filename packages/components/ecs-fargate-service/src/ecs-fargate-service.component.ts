@@ -189,9 +189,8 @@ export class EcsFargateServiceComponent extends BaseComponent {
       taskRole = managedTaskRole;
     }
 
-    // Determine ephemeral storage size based on framework
-    const isFedRamp = this.context.complianceFramework?.startsWith('fedramp');
-    const ephemeralStorageGiB = isFedRamp ? 50 : 30;
+    // Use ephemeral storage size from config (set by builder based on risk level)
+    const ephemeralStorageGiB = this.config!.ephemeralStorageGiB ?? 30;
 
     // Create task definition with ephemeral storage encryption
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
@@ -311,40 +310,32 @@ export class EcsFargateServiceComponent extends BaseComponent {
   }
 
   /**
-   * Get KMS key for log encryption (required for FedRAMP)
+   * Get KMS key for log encryption (required for high-risk environments)
    */
   private getLogEncryptionKey(): kms.IKey | undefined {
-    const framework = this.context.complianceFramework;
-
-    // Commercial environments use AWS-managed encryption (default)
-    if (!framework || framework === 'commercial') {
+    // Use config value - set by builder based on risk level
+    if (!this.config!.useCustomerManagedKeyForLogs) {
       return undefined;
     }
 
-    // FedRAMP requires customer-managed CMK
-    if (framework.startsWith('fedramp')) {
-      // Check if KMS key is provided in context
-      if ((this.context as any).kmsKeyArn) {
-        return kms.Key.fromKeyArn(this, 'LogKmsKey', (this.context as any).kmsKeyArn);
-      }
-
-      // Create a new CMK for this service
-      const key = new kms.Key(this, 'LogEncryptionKey', {
-        description: `Log encryption key for ${this.context.serviceName} ${this.spec.name}`,
-        enableKeyRotation: true,
-        removalPolicy: cdk.RemovalPolicy.RETAIN, // Never delete encryption keys
-      });
-
-      this.applyStandardTags(key, {
-        'resource-type': 'kms-key',
-        'purpose': 'log-encryption',
-        'compliance-framework': framework
-      });
-
-      return key;
+    // Check if KMS key is provided in context
+    if ((this.context as any).kmsKeyArn) {
+      return kms.Key.fromKeyArn(this, 'LogKmsKey', (this.context as any).kmsKeyArn);
     }
 
-    return undefined;
+    // Create a new CMK for this service
+    const key = new kms.Key(this, 'LogEncryptionKey', {
+      description: `Log encryption key for ${this.context.serviceName} ${this.spec.name}`,
+      enableKeyRotation: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN, // Never delete encryption keys
+    });
+
+    this.applyStandardTags(key, {
+      'resource-type': 'kms-key',
+      'purpose': 'log-encryption'
+    });
+
+    return key;
   }
 
   /**

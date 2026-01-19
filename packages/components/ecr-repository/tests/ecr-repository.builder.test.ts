@@ -1,8 +1,9 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
 import {
   EcrRepositoryComponentConfigBuilder,
   EcrRepositoryConfig
-} from '../ecr-repository.builder.js';
+} from '../ecr-repository.builder';
 import {
   ComponentContext,
   ComponentSpec
@@ -38,10 +39,10 @@ const createMockSpec = (config: Partial<EcrRepositoryConfig> = {}): ComponentSpe
 });
 
 describe('EcrRepositoryComponentConfigBuilder__Precedence__AppliesFrameworkDefaults', () => {
-  let platformConfigSpy: jest.SpyInstance;
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    platformConfigSpy = jest
+    platformConfigSpy = vi
       .spyOn(EcrRepositoryComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function (this: EcrRepositoryComponentConfigBuilder) {
         const framework = this.builderContext.context.complianceFramework;

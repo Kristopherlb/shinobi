@@ -5,7 +5,8 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext, ComponentContext, ComponentSpec } from '@shinobi/core';
+import { ConfigBuilder, ConfigBuilderContext, ComponentConfigSchema, ComponentContext, ComponentSpec } from '@shinobi/core';
+import schemaJson from './Config.schema.json' with { type: 'json' };
 
 /**
  * Configuration interface for Step Functions State Machine component
@@ -54,118 +55,14 @@ export interface StepFunctionsStateMachineConfig {
   
   /** Additional resource tags */
   tags?: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 /**
  * JSON Schema for Step Functions State Machine configuration validation
  */
-export const STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'Step Functions State Machine Configuration',
-  description: 'Configuration for creating a Step Functions State Machine',
-  properties: {
-    stateMachineName: {
-      type: 'string',
-      description: 'Name of the state machine (will be auto-generated if not provided)',
-      pattern: '^[a-zA-Z0-9_-]+$',
-      maxLength: 80
-    },
-    stateMachineType: {
-      type: 'string',
-      description: 'Type of state machine',
-      enum: ['STANDARD', 'EXPRESS'],
-      default: 'STANDARD'
-    },
-    definition: {
-      type: 'object',
-      description: 'State machine definition',
-      properties: {
-        definition: {
-          type: 'object',
-          description: 'State machine definition as JSON object'
-        },
-        definitionString: {
-          type: 'string',
-          description: 'State machine definition as JSON string'
-        },
-        definitionSubstitutions: {
-          type: 'object',
-          description: 'Definition substitutions',
-          additionalProperties: { type: 'string' },
-          default: {}
-        }
-      },
-      additionalProperties: false,
-      anyOf: [
-        { required: ['definition'] },
-        { required: ['definitionString'] }
-      ]
-    },
-    roleArn: {
-      type: 'string',
-      description: 'IAM role ARN for state machine execution'
-    },
-    loggingConfiguration: {
-      type: 'object',
-      description: 'Logging configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable logging',
-          default: false
-        },
-        level: {
-          type: 'string',
-          description: 'Log level',
-          enum: ['ALL', 'ERROR', 'FATAL', 'OFF'],
-          default: 'ERROR'
-        },
-        includeExecutionData: {
-          type: 'boolean',
-          description: 'Include execution data in logs',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: { enabled: false, level: 'ERROR', includeExecutionData: false }
-    },
-    tracingConfiguration: {
-      type: 'object',
-      description: 'X-Ray tracing configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable X-Ray tracing',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: { enabled: false }
-    },
-    timeout: {
-      type: 'object',
-      description: 'Execution timeout configuration',
-      properties: {
-        seconds: {
-          type: 'number',
-          description: 'Timeout in seconds',
-          minimum: 1,
-          maximum: 31536000, // 1 year
-          default: 3600
-        }
-      },
-      additionalProperties: false
-    },
-    tags: {
-      type: 'object',
-      description: 'Tags for the state machine',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  },
-  additionalProperties: false,
-  required: ['definition']
-};
+export const STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA: ComponentConfigSchema = schemaJson as ComponentConfigSchema;
 
 /**
  * ConfigBuilder for Step Functions State Machine component
@@ -208,61 +105,53 @@ export class StepFunctionsStateMachineConfigBuilder extends ConfigBuilder<StepFu
   
   /**
    * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
    */
   protected getComplianceFrameworkDefaults(): Partial<StepFunctionsStateMachineConfig> {
-    const framework = this.builderContext.context.complianceFramework;
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<StepFunctionsStateMachineConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
     
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          loggingConfiguration: {
-            enabled: true, // Mandatory logging for compliance
-            level: 'ALL',
-            includeExecutionData: true // Required for audit trail
-          },
-          tracingConfiguration: {
-            enabled: true // Required for compliance monitoring
-          },
-          tags: {
-            'compliance-framework': 'fedramp-moderate',
-            'logging-level': 'comprehensive',
-            'audit-trail': 'enabled'
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          loggingConfiguration: {
-            enabled: true, // Mandatory
-            level: 'ALL',
-            includeExecutionData: true // Required for detailed audit
-          },
-          tracingConfiguration: {
-            enabled: true // Mandatory for high security
-          },
-          timeout: {
-            seconds: 1800 // Shorter timeout for security
-          },
-          tags: {
-            'compliance-framework': 'fedramp-high',
-            'logging-level': 'comprehensive',
-            'audit-trail': 'enabled',
-            'security-level': 'high'
-          }
-        };
-        
-      default: // commercial
-        return {
-          loggingConfiguration: {
-            enabled: false,
-            level: 'ERROR'
-          },
-          tracingConfiguration: {
-            enabled: false
-          }
-        };
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        loggingConfiguration: {
+          enabled: true, // Mandatory logging for compliance
+          level: 'ALL',
+          includeExecutionData: true // Required for audit trail
+        },
+        tracingConfiguration: {
+          enabled: true // Required for compliance monitoring
+        },
+        timeout: {
+          seconds: 1800 // Shorter timeout for security (can be overridden)
+        },
+        tags: {
+          'logging-level': 'comprehensive',
+          'audit-trail': 'enabled'
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
   
   /**

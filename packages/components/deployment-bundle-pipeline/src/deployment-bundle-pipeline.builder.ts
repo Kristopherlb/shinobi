@@ -9,7 +9,6 @@ import configSchema from '../Config.schema.json' with { type: 'json' };
 import { DeploymentBundleConfig } from './types.js';
 
 const SUPPORTED_ENVIRONMENTS = ['dev', 'staging', 'prod'] as const;
-const SUPPORTED_FRAMEWORKS = ['commercial', 'fedramp-moderate', 'fedramp-high', 'iso27001', 'soc2'] as const;
 
 export const DEPLOYMENT_BUNDLE_PIPELINE_CONFIG_SCHEMA = configSchema as ComponentConfigSchema;
 
@@ -68,65 +67,67 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
     };
   }
 
-  getComplianceFrameworkDefaults(): Record<string, Partial<DeploymentBundleConfig>> {
-    return {
-      commercial: {
-        // Standard commercial defaults - already set in hardcoded
-      },
-
-      'fedramp-moderate': {
-        signing: {
-          keyless: false,
-          kmsKeyId: 'kms://aws-kms/alias/platform-cosign-fedramp-moderate'
-        },
-        security: {
-          failOnCritical: true,
-          onlyFixed: true,
-          addCpesIfNone: true
-        },
-        runner: {
-          fipsMode: true
-        }
-      },
-
-      'fedramp-high': {
-        signing: {
-          keyless: false,
-          kmsKeyId: 'kms://aws-kms/alias/platform-cosign-fedramp-high'
-        },
-        security: {
-          failOnCritical: true,
-          onlyFixed: true,
-          addCpesIfNone: true
-        },
-        runner: {
-          fipsMode: true
-        }
-      },
-
-      'iso27001': {
-        signing: {
-          keyless: false,
-          kmsKeyId: 'kms://aws-kms/alias/platform-cosign-iso27001'
-        },
-        security: {
-          failOnCritical: true,
-          onlyFixed: false,
-          addCpesIfNone: true
-        }
-      },
-
-      'soc2': {
-        signing: {
-          keyless: false,
-          kmsKeyId: 'kms://aws-kms/alias/platform-cosign-soc2'
-        },
-        security: {
-          failOnCritical: true,
-          onlyFixed: false,
-          addCpesIfNone: true
-        }
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<DeploymentBundleConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<DeploymentBundleConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
       }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      // KMS key ID can be overridden per framework if needed
+      return {
+        signing: {
+          keyless: false,
+          kmsKeyId: 'kms://aws-kms/alias/platform-cosign-high-risk' // Can be overridden per framework
+        },
+        security: {
+          failOnCritical: true,
+          onlyFixed: true,
+          addCpesIfNone: true
+        },
+        runner: {
+          fipsMode: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
+  /**
+   * @deprecated Use getComplianceFrameworkDefaults() instead. This method is kept for backward compatibility.
+   */
+  getComplianceFrameworkDefaultsLegacy(): Record<string, Partial<DeploymentBundleConfig>> {
+    // Legacy method for backward compatibility - delegates to risk-based method
+    const defaults = this.getComplianceFrameworkDefaults();
+    return {
+      commercial: {},
+      'fedramp-moderate': defaults,
+      'fedramp-high': defaults,
+      'iso27001': defaults,
+      'soc2': defaults
     };
   }
 
@@ -193,8 +194,9 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
 
     config.complianceFramework = framework;
 
-    const frameworkDefaults = this.getComplianceFrameworkDefaults()[framework];
-    if (!frameworkDefaults) {
+    // Use risk-based defaults instead of framework-specific defaults
+    const frameworkDefaults = this.getComplianceFrameworkDefaults();
+    if (!frameworkDefaults || Object.keys(frameworkDefaults).length === 0) {
       return;
     }
 
@@ -242,9 +244,8 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
       throw new Error(`Invalid environment. Must be one of: ${SUPPORTED_ENVIRONMENTS.join(', ')}`);
     }
 
-    if (config.complianceFramework && !SUPPORTED_FRAMEWORKS.includes(config.complianceFramework as any)) {
-      throw new Error(`Invalid compliance framework. Must be one of: ${SUPPORTED_FRAMEWORKS.join(', ')}`);
-    }
+    // Compliance framework validation is handled by JSON Schema validation
+    // in Config.schema.json - no hardcoded framework list needed for extensibility
 
     // Service name validation
     if (!/^[a-z0-9-]+$/.test(config.service)) {

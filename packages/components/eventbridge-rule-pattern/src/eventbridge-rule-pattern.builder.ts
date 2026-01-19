@@ -64,6 +64,8 @@ export interface EventBridgeRulePatternConfig {
     cloudWatchLogs: CloudWatchLogsConfig;
   };
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const ALARM_SCHEMA: ComponentConfigSchema = {
@@ -175,36 +177,22 @@ const ALARM_BASELINE: AlarmConfig = {
 };
 
 /**
- * Get compliance-aware defaults for log retention and removal policy
+ * Get log retention defaults (safe defaults - risk-based overrides in getComplianceFrameworkDefaults)
  */
-function getComplianceLogDefaults(framework: string): { retentionDays: number; removalPolicy: RemovalPolicyOption } {
-  switch (framework) {
-    case 'fedramp-high':
-      return {
-        retentionDays: 3653, // 10 years (>=7 year FedRAMP High requirement)
-        removalPolicy: 'retain'
-      };
-    case 'fedramp-moderate':
-      return {
-        retentionDays: 1827, // 5 years (>=3 year FedRAMP Moderate requirement)
-        removalPolicy: 'retain'
-      };
-    case 'commercial':
-    default:
-      return {
-        retentionDays: 365, // 1 year for commercial
-        removalPolicy: 'retain'
-      };
-  }
+function getDefaultLogRetention(): { retentionDays: number; removalPolicy: RemovalPolicyOption } {
+  return {
+    retentionDays: 365, // 1 year default
+    removalPolicy: 'retain'
+  };
 }
 
 /**
- * Compliance-aware fallback defaults
+ * Safe fallback defaults
  * DLQ and monitoring are now mandatory (enabled: true)
- * Log retention and removal policies are compliance-aware
+ * Log retention uses safe defaults - risk-based overrides in getComplianceFrameworkDefaults
  */
-function getHardenedFallbacks(framework: string): Partial<EventBridgeRulePatternConfig> {
-  const logDefaults = getComplianceLogDefaults(framework);
+function getHardenedFallbacks(): Partial<EventBridgeRulePatternConfig> {
+  const logDefaults = getDefaultLogRetention();
 
   return {
     description: undefined,
@@ -236,8 +224,56 @@ export class EventBridgeRulePatternComponentConfigBuilder extends ConfigBuilder<
   }
 
   protected getHardcodedFallbacks(): Record<string, any> {
-    const framework = this.builderContext.context.complianceFramework || 'commercial';
-    return getHardenedFallbacks(framework);
+    return getHardenedFallbacks();
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<EventBridgeRulePatternConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<EventBridgeRulePatternConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        highRiskEnvironment: true, // Set the flag so component can use it
+        monitoring: {
+          enabled: true,
+          failedInvocations: { ...ALARM_BASELINE, enabled: true },
+          invocations: { ...ALARM_BASELINE, comparisonOperator: 'lte', treatMissingData: 'breaching' },
+          matchedEvents: { ...ALARM_BASELINE, comparisonOperator: 'lte', treatMissingData: 'breaching' },
+          deadLetterQueueMessages: { ...ALARM_BASELINE, enabled: true },
+          cloudWatchLogs: {
+            enabled: true,
+            retentionDays: 1827, // 5 years (can be overridden to 3653 for higher risk scenarios)
+            removalPolicy: 'retain'
+          }
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): EventBridgeRulePatternConfig {
@@ -275,8 +311,7 @@ export class EventBridgeRulePatternComponentConfigBuilder extends ConfigBuilder<
 
   private normaliseConfig(config: Partial<EventBridgeRulePatternConfig>): EventBridgeRulePatternConfig {
     const ruleName = this.sanitiseRuleName(config.ruleName);
-    const framework = this.builderContext.context.complianceFramework || 'commercial';
-    const hardenedFallbacks = getHardenedFallbacks(framework);
+    const hardenedFallbacks = getHardenedFallbacks();
     const monitoring = config.monitoring ?? hardenedFallbacks.monitoring!;
     const defaultLogGroupName = this.buildManagedLogGroupName(ruleName);
 
@@ -306,9 +341,10 @@ export class EventBridgeRulePatternComponentConfigBuilder extends ConfigBuilder<
         invocations,
         matchedEvents,
         deadLetterQueueMessages: dlqMessages,
-        cloudWatchLogs: this.normaliseCloudWatchLogs(monitoring.cloudWatchLogs, framework, defaultLogGroupName)
+        cloudWatchLogs: this.normaliseCloudWatchLogs(monitoring.cloudWatchLogs, defaultLogGroupName)
       },
-      tags: config.tags ?? {}
+      tags: config.tags ?? {},
+      highRiskEnvironment: config.highRiskEnvironment
     };
   }
 
@@ -353,10 +389,9 @@ export class EventBridgeRulePatternComponentConfigBuilder extends ConfigBuilder<
 
   private normaliseCloudWatchLogs(
     config: Partial<CloudWatchLogsConfig> | undefined,
-    framework: string,
     defaultLogGroupName: string
   ): CloudWatchLogsConfig {
-    const defaults = getComplianceLogDefaults(framework);
+    const defaults = getDefaultLogRetention();
     return {
       enabled: true, // Always true - mandatory
       logGroupName: config?.logGroupName ?? defaultLogGroupName,

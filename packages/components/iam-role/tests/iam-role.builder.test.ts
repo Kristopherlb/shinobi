@@ -3,7 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../src/iam-role.builder.js';
+import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../src/iam-role.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { Stack } from 'aws-cdk-lib';
 
@@ -66,15 +66,22 @@ describe('IamRoleConfigBuilder', () => {
       expect(config.controls?.trustPolicies?.enforceMfa).toBe(false);
     });
     
-    it('should apply FedRAMP compliance defaults', () => {
+    it('should apply FedRAMP compliance defaults when highRiskEnvironment is set', () => {
       const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
+      const spec = createMockSpec({
+        highRiskEnvironment: true
+      } as Partial<IamRoleConfig>);
       
       const builder = new IamRoleComponentConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       expect(config.controls?.enforceBoundary).toBe(true);
       expect(config.controls?.trustPolicies?.enforceMfa).toBe(true);
+      expect(config.controls?.denyInsecureTransport).toBe(true);
+      expect(config.logging?.audit?.enabled).toBe(true);
+      expect(config.logging?.audit?.retentionInDays).toBe(1095);
+      expect(config.monitoring?.enabled).toBe(true);
+      expect(config.monitoring?.sessionAlarm?.enabled).toBe(true);
     });
     
   });

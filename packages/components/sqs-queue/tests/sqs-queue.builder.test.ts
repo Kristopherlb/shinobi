@@ -5,7 +5,7 @@
  * @author Platform Team
  */
 
-import { SqsQueueConfigBuilder, SqsQueueConfig } from '../sqs-queue.builder.js';
+import { SqsQueueConfigBuilder, SqsQueueConfig } from '../sqs-queue.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { App, Stack } from 'aws-cdk-lib';
 

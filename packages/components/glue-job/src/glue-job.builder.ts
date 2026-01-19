@@ -266,6 +266,61 @@ export class GlueJobComponentConfigBuilder extends ConfigBuilder<GlueJobConfig> 
     return HARDENED_DEFAULTS;
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<GlueJobConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<GlueJobConfig & { highRiskEnvironment?: boolean }> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        security: {
+          encryption: {
+            enabled: true,
+            createCustomerManagedKey: true,
+            removalPolicy: 'retain'
+          }
+        },
+        logging: {
+          groups: (componentConfig?.logging?.groups ?? DEFAULT_LOGGING_GROUPS).map(group => ({
+            ...group,
+            retentionDays: Math.max(group.retentionDays ?? 1827, 1827), // 5 years minimum for high-risk
+            removalPolicy: 'retain' as RemovalPolicyOption
+          }))
+        },
+        monitoring: {
+          enabled: true,
+          jobFailure: DEFAULT_MONITORING.jobFailure,
+          jobDuration: DEFAULT_MONITORING.jobDuration
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): GlueJobConfig {
     const resolved = super.buildSync() as Partial<GlueJobConfig>;
     return this.normaliseConfig(resolved);

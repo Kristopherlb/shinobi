@@ -1,7 +1,8 @@
+import { describe, it, expect } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { VpcComponent } from '../vpc.component.js';
-import { VpcConfig } from '../vpc.builder.js';
+import { VpcComponent } from '../vpc.component';
+import { VpcConfig } from '../vpc.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({

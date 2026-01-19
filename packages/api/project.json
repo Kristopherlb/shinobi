@@ -1,0 +1,40 @@
+{
+  "name": "@shinobi/api",
+  "root": "packages/api",
+  "sourceRoot": "packages/api/src",
+  "projectType": "library",
+  "implicitDependencies": [],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -b packages/api/tsconfig.lib.json && mkdir -p packages/api/dist/schemas && cp packages/api/src/schemas/capability.schema.json packages/api/dist/schemas/capability.schema.json",
+        "cwd": "{workspaceRoot}"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/api/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "config": "packages/api/vitest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint . --ext .ts,.tsx"
+      }
+    }
+  },
+  "tags": ["scope:shinobi", "type:api"]
+}
+
+

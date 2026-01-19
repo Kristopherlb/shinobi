@@ -1,14 +1,13 @@
 import * as path from 'path';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { LambdaWorkerComponent } from '../lambda-worker.component.js';
-import { LambdaWorkerConfig } from '../lambda-worker.builder.js';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { LambdaWorkerComponent } from '../src/lambda-worker.component';
+import { LambdaWorkerConfig } from '../src/lambda-worker.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
-import { SqsQueueComponent } from '../../sqs-queue/sqs-queue.component.js';
+import { SqsQueueComponent } from '../../sqs-queue/sqs-queue.component';
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures/basic-lambda');
-const VPC_ID = 'vpc-0abc123def4567890';
-const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'worker-service',
@@ -50,28 +49,6 @@ const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => 
 };
 
 describe('LambdaWorkerComponent synthesis', () => {
-  const originalContext = process.env.CDK_CONTEXT_JSON;
-
-  beforeAll(() => {
-    process.env.CDK_CONTEXT_JSON = JSON.stringify({
-      [CONTEXT_KEY]: {
-        vpcId: VPC_ID,
-        availabilityZones: ['us-east-1a', 'us-east-1b'],
-        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
-        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
-        isolatedSubnetIds: [],
-        ownerAccountId: '123456789012'
-      }
-    });
-  });
-
-  afterAll(() => {
-    if (originalContext === undefined) {
-      delete process.env.CDK_CONTEXT_JSON;
-    } else {
-      process.env.CDK_CONTEXT_JSON = originalContext;
-    }
-  });
 
   it('synthesises a commercial worker with an SQS event source', () => {
     const spec = createSpec({
@@ -82,7 +59,8 @@ describe('LambdaWorkerComponent synthesis', () => {
         {
           type: 'sqs',
           queueArn: 'arn:aws:sqs:us-east-1:123456789012:image-worker-queue',
-          batchSize: 5
+          batchSize: 5,
+          allowDirectGrant: true // Required for external queue ARN
         }
       ],
       monitoring: {
@@ -144,16 +122,30 @@ describe('LambdaWorkerComponent synthesis', () => {
   });
 
   it('honours fedramp-high defaults including VPC lookups', () => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+    const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
+    const context = createContext('fedramp-high');
+    context.vpc = vpc;
+
     const spec = createSpec({
       vpc: {
         enabled: true,
-        vpcId: VPC_ID,
-        subnetIds: ['subnet-private-a', 'subnet-private-b'],
+        vpcId: 'vpc-12345', // Required by validator when VPC is enabled (even though we use context.vpc)
+        // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
+        // Omit subnetIds to use VPC's privateSubnets (fromSubnetId doesn't work with injected VPC constructs)
+        subnetIds: [],
         securityGroupIds: ['sg-0123456789abcdef0']
-      }
+      },
+      kmsKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012' // Required for FedRAMP High
     });
 
-    const { template } = synthesizeComponent(createContext('fedramp-high'), spec);
+    const component = new LambdaWorkerComponent(stack, spec.name, context, spec);
+    component.synth();
+    const template = Template.fromStack(stack);
 
     template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({
       VpcConfig: Match.objectLike({

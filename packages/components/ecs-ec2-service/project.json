@@ -18,14 +18,19 @@
       ]
     },
     "test": {
-      "executor": "@nx/vitest:test",
-      "options": {
-        "config": "packages/components/ecs-ec2-service/vitest.config.ts",
-        "passWithNoTests": true
-      },
+      "executor": "nx:run-commands",
       "outputs": [
         "{projectRoot}/coverage"
-      ]
+      ],
+      "options": {
+        "commands": [
+          {
+            "command": "vitest run --config vitest.config.ts",
+            "forwardAllArgs": false
+          }
+        ],
+        "cwd": "{projectRoot}"
+      }
     },
     "lint": {
       "executor": "nx:run-commands",

@@ -13,8 +13,8 @@ import type { IUnifiedBinderStrategy } from '../../../contracts/platform-binding
 describe('createUnifiedBinderRegistry', () => {
   let registry: UnifiedBinderRegistry;
 
-  beforeAll(async () => {
-    registry = await createUnifiedBinderRegistry();
+  beforeAll(() => {
+    registry = createUnifiedBinderRegistry();
   });
 
   describe('Basic Functionality', () => {
@@ -81,7 +81,7 @@ describe('createUnifiedBinderRegistry', () => {
       if (kmsStrategy && 'getStrategyName' in kmsStrategy && typeof kmsStrategy.getStrategyName === 'function') {
         expect(typeof kmsStrategy.getStrategyName()).toBe('string');
       } else {
-        fail('Strategy should have getStrategyName method');
+        throw new Error('Strategy should have getStrategyName method');
       }
     });
 
@@ -101,14 +101,14 @@ describe('createUnifiedBinderRegistry', () => {
   });
 
   describe('Error Handling', () => {
-    it('gracefully handles instantiation failures', async () => {
+    it('gracefully handles instantiation failures', () => {
       // Factory should not throw even if some strategies fail to instantiate
-      await expect(createUnifiedBinderRegistry()).resolves.toBeDefined();
+      expect(() => createUnifiedBinderRegistry()).not.toThrow();
     });
 
-    it('returns valid registry even if some strategies fail', async () => {
+    it('returns valid registry even if some strategies fail', () => {
       // Factory should return a registry with successfully discovered strategies
-      const registry = await createUnifiedBinderRegistry();
+      const registry = createUnifiedBinderRegistry();
       // Note: toBeInstanceOf can fail in Vitest with ESM due to module resolution
       // Checking methods instead is more reliable
       expect(registry.constructor.name).toBe('UnifiedBinderRegistry');

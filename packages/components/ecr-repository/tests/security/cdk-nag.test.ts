@@ -1,15 +1,16 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
-import { EcrRepositoryComponent } from '../../ecr-repository.component.js';
-import { EcrRepositoryComponentConfigBuilder } from '../../ecr-repository.builder.js';
+import { EcrRepositoryComponent } from '../../ecr-repository.component';
+import { EcrRepositoryComponentConfigBuilder } from '../../ecr-repository.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
 describe.skip('AwsSolutionsChecks__EcrRepository', () => {
-  let platformConfigSpy: jest.SpyInstance;
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    platformConfigSpy = jest
+    platformConfigSpy = vi
       .spyOn(EcrRepositoryComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(() => ({
         monitoring: { enabled: true, detailedMetrics: false },

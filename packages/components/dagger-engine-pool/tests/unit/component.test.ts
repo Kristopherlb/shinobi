@@ -20,42 +20,12 @@ const testMetadata = {
   "human_reviewed_by": "platform-team"
 };
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
 import { Template, Match } from 'aws-cdk-lib/assertions';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-// Use shared mock utilities
-import {
-  setupPlatformMocks,
-  createMockComponentContext,
-  createMockComponentSpec,
-  createTestStack
-} from '../../../../../tests/utils/mock-base-component.js';
-
-// Setup platform mocks
-setupPlatformMocks();
-
-import { DaggerEnginePool } from '../../src/dagger-engine-pool.component.js';
-
-// Define interfaces locally to avoid import issues
-interface ComponentContext {
-  serviceName: string;
-  environment: string;
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
-  owner: string;
-  account: string;
-  region: string;
-  scope: Construct;
-  observability?: {
-    collectorEndpoint?: string;
-  };
-}
-
-interface ComponentSpec {
-  type: string;
-  name: string;
-  config: any;
-}
+import { DaggerEnginePool } from '../../src/dagger-engine-pool.component';
 
 describe('DaggerEnginePool Component', () => {
   let app: cdk.App;
@@ -66,18 +36,22 @@ describe('DaggerEnginePool Component', () => {
   beforeEach(() => {
     // Deterministic setup (Platform Testing Standard §6)
     app = new cdk.App();
-    stack = createTestStack(app, 'TestStack');
+    stack = new cdk.Stack(app, 'TestStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
 
-    context = createMockComponentContext({
+    context = {
       serviceName: 'test-dagger-service',
       environment: 'test',
       complianceFramework: 'commercial',
       owner: 'platform-team',
+      account: '123456789012',
+      region: 'us-east-1',
       scope: stack,
       observability: {
         collectorEndpoint: 'https://otel.test.com:4318'
       }
-    });
+    } as ComponentContext;
 
     spec = {
       type: 'dagger-engine-pool',
@@ -87,12 +61,12 @@ describe('DaggerEnginePool Component', () => {
         fipsMode: true,
         instanceType: 'c7i.large'
       }
-    };
+    } as ComponentSpec;
   });
 
   afterEach(() => {
     // Cleanup (Platform Testing Standard §6)
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Component__ValidConfiguration__CreatesExpectedResources', () => {

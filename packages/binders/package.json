@@ -15,57 +15,69 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
     "./analytics": {
       "types": "./dist/strategies/analytics/index.d.ts",
+      "development": "./src/strategies/analytics/index.ts",
       "import": "./dist/strategies/analytics/index.js"
     },
     "./api": {
       "types": "./dist/strategies/api/index.d.ts",
+      "development": "./src/strategies/api/index.ts",
       "import": "./dist/strategies/api/index.js"
     },
     "./cdn": {
       "types": "./dist/strategies/cdn/index.d.ts",
+      "development": "./src/strategies/cdn/index.ts",
       "import": "./dist/strategies/cdn/index.js"
     },
     "./compute": {
       "types": "./dist/strategies/compute/index.d.ts",
+      "development": "./src/strategies/compute/index.ts",
       "import": "./dist/strategies/compute/index.js"
     },
     "./database": {
       "types": "./dist/strategies/database/index.d.ts",
+      "development": "./src/strategies/database/index.ts",
       "import": "./dist/strategies/database/index.js"
     },
     "./iot": {
       "types": "./dist/strategies/iot/index.d.ts",
+      "development": "./src/strategies/iot/index.ts",
       "import": "./dist/strategies/iot/index.js"
     },
     "./messaging": {
       "types": "./dist/strategies/messaging/index.d.ts",
+      "development": "./src/strategies/messaging/index.ts",
       "import": "./dist/strategies/messaging/index.js"
     },
     "./ml": {
       "types": "./dist/strategies/ml/index.d.ts",
+      "development": "./src/strategies/ml/index.ts",
       "import": "./dist/strategies/ml/index.js"
     },
     "./mobile": {
       "types": "./dist/strategies/mobile/index.d.ts",
+      "development": "./src/strategies/mobile/index.ts",
       "import": "./dist/strategies/mobile/index.js"
     },
     "./networking": {
       "types": "./dist/strategies/networking/index.d.ts",
+      "development": "./src/strategies/networking/index.ts",
       "import": "./dist/strategies/networking/index.js"
     },
     "./security": {
       "types": "./dist/strategies/security/index.d.ts",
+      "development": "./src/strategies/security/index.ts",
       "import": "./dist/strategies/security/index.js"
     },
     "./storage": {
       "types": "./dist/strategies/storage/index.d.ts",
+      "development": "./src/strategies/storage/index.ts",
       "import": "./dist/strategies/storage/index.js"
     },
     "./package.json": "./package.json"
   }
 }
-

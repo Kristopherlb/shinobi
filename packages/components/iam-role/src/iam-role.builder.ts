@@ -65,6 +65,8 @@ export interface IamRoleConfig {
   path?: string;
   permissionsBoundary?: string;
   tags?: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml). When true, applies enhanced security defaults aligned with FedRAMP requirements. */
+  highRiskEnvironment?: boolean;
   logging?: {
     access?: IamRoleLogConfig;
     audit?: IamRoleLogConfig;
@@ -129,6 +131,74 @@ export class IamRoleComponentConfigBuilder extends ConfigBuilder<IamRoleConfig> 
       },
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<IamRoleConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<IamRoleConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        controls: {
+          requireInstanceProfile: true,
+          enforceBoundary: true,
+          denyInsecureTransport: true,
+          trustPolicies: {
+            enforceMfa: true,
+            allowExternalId: false
+          }
+        },
+        logging: {
+          audit: {
+            enabled: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
+            removalPolicy: 'retain'
+          },
+          access: {
+            enabled: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
+            removalPolicy: 'retain'
+          }
+        },
+        monitoring: {
+          enabled: true,
+          detailedMetrics: true,
+          sessionAlarm: {
+            enabled: true,
+            thresholdMinutes: 15,
+            evaluationPeriods: 1,
+            treatMissingData: 'breaching'
+          }
+        },
+        maxSessionDuration: 3600 // Enforce standard session duration for high-risk environments
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): IamRoleConfig {
