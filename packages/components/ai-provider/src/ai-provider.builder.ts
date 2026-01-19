@@ -20,6 +20,8 @@ export interface AIProviderComponentConfig {
   region?: string;
   auth?: AIProviderAuthConfig;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const AUTH_SCHEMA: ComponentConfigSchema = {
@@ -90,6 +92,48 @@ export class AIProviderComponentConfigBuilder extends ConfigBuilder<AIProviderCo
 
   protected getHardcodedFallbacks(): Partial<AIProviderComponentConfig> {
     return DEFAULT_CONFIG;
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<AIProviderComponentConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<AIProviderComponentConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        // For high-risk environments, prefer AWS Bedrock for better security controls
+        // or ensure proper secret management is configured
+        auth: {
+          type: 'aws', // Use AWS IAM authentication when possible for high-risk
+          secretRef: componentConfig?.auth?.secretRef // Preserve secretRef if provided
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): AIProviderComponentConfig {

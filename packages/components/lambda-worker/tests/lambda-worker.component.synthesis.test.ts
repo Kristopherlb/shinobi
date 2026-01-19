@@ -134,6 +134,7 @@ describe('LambdaWorkerComponent synthesis', () => {
     const spec = createSpec({
       vpc: {
         enabled: true,
+        vpcId: 'vpc-12345', // Required by validator when VPC is enabled (even though we use context.vpc)
         // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
         // Omit subnetIds to use VPC's privateSubnets (fromSubnetId doesn't work with injected VPC constructs)
         subnetIds: [],

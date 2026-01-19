@@ -257,6 +257,7 @@ export class EventBridgeRulePatternComponentConfigBuilder extends ConfigBuilder<
       // Apply enhanced security defaults for high-risk environments
       // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
       return {
+        highRiskEnvironment: true, // Set the flag so component can use it
         monitoring: {
           enabled: true,
           failedInvocations: { ...ALARM_BASELINE, enabled: true },
@@ -265,7 +266,7 @@ export class EventBridgeRulePatternComponentConfigBuilder extends ConfigBuilder<
           deadLetterQueueMessages: { ...ALARM_BASELINE, enabled: true },
           cloudWatchLogs: {
             enabled: true,
-            retentionDays: 1827, // 5 years (can be overridden to 3653 for higher risk)
+            retentionDays: 1827, // 5 years (can be overridden to 3653 for higher risk scenarios)
             removalPolicy: 'retain'
           }
         }

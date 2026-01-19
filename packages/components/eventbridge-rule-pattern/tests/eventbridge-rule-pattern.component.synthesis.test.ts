@@ -64,13 +64,15 @@ describe('EventBridgeRulePatternComponent synthesis', () => {
   });
 
   it('creates customer-managed keys and uses 3-year retention for fedramp-moderate', () => {
-    const { template, component } = synthesize('fedramp-moderate');
+    const { template, component } = synthesize('fedramp-moderate', {
+      highRiskEnvironment: true
+    });
 
     template.resourceCountIs('AWS::SQS::Queue', 1);
     template.resourceCountIs('AWS::KMS::Key', 2); // Separate keys for logs and DLQ
     
     template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
-      RetentionInDays: 1827 // FedRAMP Moderate: 5 years (>= requirement)
+      RetentionInDays: 1827 // 5 years (high-risk environment default)
     }));
 
     template.hasResourceProperties('AWS::KMS::Key', Match.objectLike({
@@ -84,12 +86,21 @@ describe('EventBridgeRulePatternComponent synthesis', () => {
   });
 
   it('creates customer-managed keys and uses 7-year retention for fedramp-high', () => {
-    const { template } = synthesize('fedramp-high');
+    const { template } = synthesize('fedramp-high', {
+      highRiskEnvironment: true,
+      monitoring: {
+        enabled: true,
+        cloudWatchLogs: {
+          enabled: true,
+          retentionDays: 3653 // 10 years for higher-risk scenarios
+        }
+      }
+    });
 
     template.resourceCountIs('AWS::KMS::Key', 2);
     
     template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
-      RetentionInDays: 3653 // FedRAMP High: 10 years (>= requirement)
+      RetentionInDays: 3653 // 10 years (overridden for higher risk)
     }));
 
     template.hasResourceProperties('AWS::KMS::Key', Match.objectLike({
@@ -166,6 +177,7 @@ describe('EventBridgeRulePatternComponent synthesis', () => {
     const stack = new Stack(app, 'TestStack-Invalid');
     const context = baseContext('fedramp-high');
     const component = new EventBridgeRulePatternComponent(stack, 'Rule-invalid', context, spec({
+      highRiskEnvironment: true,
       monitoring: {
         enabled: true,
         cloudWatchLogs: {

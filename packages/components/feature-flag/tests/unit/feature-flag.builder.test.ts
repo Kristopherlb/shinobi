@@ -103,7 +103,7 @@ describe('FeatureFlagConfigBuilder', () => {
     const spec = createMockSpec({
       monitoring: {
         enabled: true,
-        detailedMetrics: false
+        detailedMetrics: true
       }
     });
 

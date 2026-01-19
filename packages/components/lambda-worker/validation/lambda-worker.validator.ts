@@ -3,6 +3,9 @@
  * 
  * Provides comprehensive input validation and error handling for Lambda Worker components.
  * Ensures all configurations meet security, compliance, and operational requirements.
+ * 
+ * NOTE: This validator is config-driven and validates config values only.
+ * All validation logic uses risk-based flags set by the builder.
  */
 
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
@@ -15,6 +18,7 @@ export interface ValidationError {
   field: string;
   message: string;
   severity: 'error' | 'warning';
+  /** Optional compliance framework metadata (for logging only, not used in validation logic) */
   complianceFramework?: string;
 }
 
@@ -33,9 +37,11 @@ export interface ValidationResult {
  * 
  * Validates Lambda Worker component configurations against:
  * - Security best practices
- * - Compliance framework requirements
  * - Operational requirements
  * - Performance optimization guidelines
+ * 
+ * This validator is config-driven and validates resolved config values only.
+ * All validation is based on config flags set by the builder.
  */
 export class LambdaWorkerValidator {
   private context: ComponentContext;
@@ -151,19 +157,20 @@ export class LambdaWorkerValidator {
 
   /**
    * Validate security configuration
+   * Uses config flags set by builder (highRiskEnvironment, requireKmsEncryption)
    */
   private validateSecurityConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // VPC configuration for high-risk environments (set via config or platform config)
-    // Check VPC for high-risk environments when VPC is missing or disabled
-    // Note: Tests that don't want VPC errors (log retention, tracing) should set up VPC properly
-    if (this.config?.highRiskEnvironment) {
+    const isHighRisk = this.config?.highRiskEnvironment ?? false;
+    
+    // VPC configuration for high-risk environments (set via config flag)
+    if (isHighRisk) {
       if (!this.config.vpc || !this.config.vpc.enabled) {
         errors.push({
           field: 'vpc.enabled',
           message: 'VPC configuration is mandatory for high-risk environments',
-          severity: 'error'
+          severity: 'error',
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
-        // Don't check vpcId/securityGroupIds when VPC is not enabled - continue with other validations
       } else {
         // Only validate vpcId/securityGroupIds if VPC is enabled
         if (!this.config.vpc.vpcId) {
@@ -183,13 +190,14 @@ export class LambdaWorkerValidator {
       }
     }
 
-    // KMS encryption for high-risk environments (set via config or platform config)
-    if (this.config?.highRiskEnvironment && this.config?.requireKmsEncryption) {
+    // KMS encryption for high-risk environments (set via config flag)
+    if (this.config?.requireKmsEncryption ?? false) {
       if (!this.config.kmsKeyArn) {
         errors.push({
           field: 'kmsKeyArn',
           message: 'KMS encryption is mandatory for high-risk environments',
-          severity: 'error'
+          severity: 'error',
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
@@ -212,24 +220,25 @@ export class LambdaWorkerValidator {
     }
 
     // Security tools validation for high-risk environments
-    if (this.config?.highRiskEnvironment) {
-      // Check for runtimeSecurity (as expected by tests)
+    if (isHighRisk) {
       if (!this.config.securityTools?.runtimeSecurity) {
         warnings.push({
           field: 'securityTools.runtimeSecurity',
           message: 'Runtime security monitoring is recommended for high-risk environments',
-          severity: 'warning'
+          severity: 'warning',
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
   }
 
   /**
-   * Validate compliance configuration based on risk level (set via config)
+   * Validate compliance configuration based on config flags set by builder
+   * Uses risk-based config flags (highRiskEnvironment, requireActiveTracing, etc.)
    */
   private validateComplianceConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // Log retention requirements - check config value against minimum
-    const minLogRetention = this.getMinimumLogRetention();
+    // Log retention requirements - use minLogRetentionDays from config (set by builder)
+    const minLogRetention = this.config?.minLogRetentionDays ?? 30;
     if (this.config.logging.logRetentionDays < minLogRetention) {
       errors.push({
         field: 'logging.logRetentionDays',
@@ -238,24 +247,26 @@ export class LambdaWorkerValidator {
       });
     }
 
-    // Tracing requirements for high-risk environments (set via config or platform config)
-    if (this.config?.highRiskEnvironment && this.config?.requireActiveTracing) {
+    // Tracing requirements for high-risk environments (set via config flag)
+    if (this.config?.requireActiveTracing ?? false) {
       if (this.config.tracing.mode !== 'Active') {
         errors.push({
           field: 'tracing.mode',
           message: 'Active X-Ray tracing is mandatory for high-risk environments',
-          severity: 'error'
+          severity: 'error',
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
 
-    // Hardening profile validation for high-risk environments
-    if (this.config?.highRiskEnvironment && this.config?.requireHighHardening) {
+    // Hardening profile validation for high-risk environments (set via config flag)
+    if (this.config?.requireHighHardening ?? false) {
       if (this.config.hardeningProfile !== 'high') {
         warnings.push({
           field: 'hardeningProfile',
           message: 'High hardening profile is recommended for high-risk environments',
-          severity: 'warning'
+          severity: 'warning',
+          complianceFramework: this.context.complianceFramework // For logging metadata only
         });
       }
     }
@@ -378,18 +389,6 @@ export class LambdaWorkerValidator {
         severity: 'error'
       });
     }
-  }
-
-  /**
-   * Get minimum log retention days based on config (set by builder based on risk level)
-   */
-  private getMinimumLogRetention(): number {
-    // Use config value if set by builder, otherwise use safe default
-    if (this.config?.minLogRetentionDays) {
-      return this.config.minLogRetentionDays;
-    }
-    // Default minimum for standard environments
-    return 30;
   }
 
   /**

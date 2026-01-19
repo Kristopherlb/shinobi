@@ -65,8 +65,8 @@ describe('KinesisStreamComponent synthesis', () => {
 
     template.hasResourceProperties('AWS::Kinesis::Stream', {
       Name: 'ingest-events',
-      ShardCount: Match.integerGreaterThan(1),
-      RetentionPeriodHours: Match.integerGreaterThanOrEqual(168)
+      ShardCount: 4, // FedRAMP High default from platform config
+      RetentionPeriodHours: 168 // FedRAMP High default from platform config
     });
   });
 

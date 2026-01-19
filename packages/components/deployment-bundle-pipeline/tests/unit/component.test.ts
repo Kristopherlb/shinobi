@@ -20,7 +20,7 @@ describe('DeploymentBundlePipelineComponent', () => {
     stack = new Stack(undefined, 'TestStack');
     platformConfigSpy = vi
       .spyOn(DeploymentBundlePipelineBuilder.prototype as any, '_loadPlatformConfiguration')
-      .mockReturnValue({ defaults: { 'deployment-bundle-pipeline': {} } });
+      .mockReturnValue({});
     loggerStub = {
       info: vi.fn(),
       error: vi.fn(),

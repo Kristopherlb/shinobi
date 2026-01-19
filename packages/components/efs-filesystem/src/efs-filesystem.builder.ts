@@ -277,6 +277,89 @@ export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesy
     } as Partial<EfsFilesystemConfig>;
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<EfsFilesystemConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<EfsFilesystemConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        encryption: {
+          enabled: true,
+          encryptInTransit: true, // TLS encryption required for high-risk environments
+          customerManagedKey: {
+            create: true, // Customer-managed KMS key required
+            enableRotation: true
+          }
+        },
+        backups: {
+          enabled: true // Automated backups required for high-risk environments
+        },
+        monitoring: {
+          enabled: true,
+          alarms: {
+            storageUtilization: {
+              ...DEFAULT_ALARM_BASELINE,
+              enabled: true,
+              threshold: 1099511627776
+            },
+            clientConnections: {
+              ...DEFAULT_ALARM_BASELINE,
+              enabled: true,
+              threshold: 1000
+            },
+            burstCreditBalance: {
+              ...DEFAULT_ALARM_BASELINE,
+              enabled: true,
+              threshold: 128,
+              comparisonOperator: 'lt'
+            }
+          }
+        },
+        logging: {
+          access: {
+            enabled: true, // Enable access logging for high-risk environments
+            createLogGroup: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk scenarios)
+            removalPolicy: 'retain'
+          },
+          audit: {
+            enabled: true,
+            createLogGroup: true,
+            retentionInDays: 2555, // 7 years for audit logs in high-risk environments
+            removalPolicy: 'retain'
+          }
+        },
+        useCustomerManagedKeyForLogs: true // Customer-managed encryption for logs
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): EfsFilesystemConfig {
     const resolved = super.buildSync() as Partial<EfsFilesystemConfig>;
     return this.normaliseConfig(resolved);

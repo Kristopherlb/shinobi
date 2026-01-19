@@ -122,6 +122,7 @@ export class IamPolicyComponent extends BaseComponent {
       });
 
       // Only managed policies support tags
+      // Apply tags using Tags.of() - this works for ManagedPolicy constructs
       this.applyStandardTags(this.policy, {
         'policy-type': 'managed',
         'policy-name': policyName,
@@ -132,6 +133,37 @@ export class IamPolicyComponent extends BaseComponent {
         Object.entries(this.config!.tags).forEach(([key, value]) => {
           cdk.Tags.of(this.policy!).add(key, value);
         });
+      }
+      
+      // Also apply tags directly to the CloudFormation construct to ensure they appear in the template
+      const cfnPolicy = this.policy.node.defaultChild as iam.CfnManagedPolicy;
+      if (cfnPolicy) {
+        // Use addPropertyOverride to set tags on the CloudFormation resource
+        const taggingContext = {
+          serviceName: this.context.serviceName,
+          serviceLabels: this.context.serviceLabels,
+          componentName: this.spec.name,
+          componentType: this.getType(),
+          environment: this.context.environment,
+          region: this.context.region,
+          accountId: this.context.accountId,
+          complianceFramework: this.context.complianceFramework,
+          tags: this.context.tags,
+          governance: this.governanceMetadata
+        };
+        
+        const standardTags = this.taggingService.buildStandardTags(taggingContext);
+        const additionalTags = {
+          'policy-type': 'managed',
+          'policy-name': policyName,
+          'statements-count': policyDocument.statementCount.toString()
+        };
+        
+        const allTags = { ...standardTags, ...additionalTags, ...(this.config!.tags || {}) };
+        cfnPolicy.addPropertyOverride('Tags', Object.entries(allTags).map(([key, value]) => ({
+          Key: key,
+          Value: String(value)
+        })));
       }
     } else {
       // For inline policies - note: IAM::Policy resources do NOT support tags

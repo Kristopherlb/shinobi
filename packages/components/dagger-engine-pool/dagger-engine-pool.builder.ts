@@ -107,9 +107,7 @@ export class DaggerConfigBuilder extends ConfigBuilder<DaggerConfig> {
       };
     }
     
-    return {
-      compliance: { forbidPublicExposure: true, forbidNoKms: true }
-    };
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   private merge(partial: Partial<DaggerConfig>) {

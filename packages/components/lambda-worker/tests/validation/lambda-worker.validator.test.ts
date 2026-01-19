@@ -157,8 +157,10 @@ describe('Lambda Worker Validator Tests', () => {
   });
 
   describe('Security Configuration Validation', () => {
-    test('should require VPC for FedRAMP compliance', () => {
+    test('should require VPC for high-risk environments', () => {
       context.complianceFramework = 'fedramp-moderate';
+      // Set high-risk environment flag (set by builder based on compliance framework)
+      config.highRiskEnvironment = true;
       // Set up log retention and tracing to avoid extra errors (this test is only testing VPC)
       config.logging.logRetentionDays = 90; // Minimum for fedramp-moderate
       config.tracing.mode = 'Active'; // Required for FedRAMP
@@ -168,12 +170,14 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe('vpc.enabled');
-      expect(result.errors[0].message).toContain('VPC configuration is mandatory for FedRAMP compliance');
+      expect(result.errors[0].message).toContain('VPC configuration is mandatory for high-risk environments');
       expect(result.errors[0].complianceFramework).toBe('fedramp-moderate');
     });
 
-    test('should require KMS encryption for high-compliance frameworks', () => {
+    test('should require KMS encryption for high-risk environments', () => {
       context.complianceFramework = 'fedramp-high';
+      // Set requireKmsEncryption flag (set by builder based on compliance framework)
+      config.requireKmsEncryption = true;
       // Set up VPC, log retention, and tracing to avoid extra errors (this test is only testing KMS)
       config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
       config.logging.logRetentionDays = 180; // Minimum for fedramp-high
@@ -184,7 +188,7 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe('kmsKeyArn');
-      expect(result.errors[0].message).toContain('KMS encryption is mandatory for high-compliance frameworks');
+      expect(result.errors[0].message).toContain('KMS encryption is mandatory for high-risk environments');
       expect(result.errors[0].complianceFramework).toBe('fedramp-high');
     });
 
@@ -219,8 +223,10 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    test('should recommend runtime security for FedRAMP High', () => {
+    test('should recommend runtime security for high-risk environments', () => {
       context.complianceFramework = 'fedramp-high';
+      // Set high-risk environment flag (set by builder based on compliance framework)
+      config.highRiskEnvironment = true;
       // Set up KMS, VPC, log retention, tracing, and hardening to avoid extra warnings/errors (this test is only testing runtime security)
       config.kmsKeyArn = 'arn:aws:kms:us-east-1:123456789012:key/12345678';
       config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
@@ -232,13 +238,15 @@ describe('Lambda Worker Validator Tests', () => {
 
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0].field).toBe('securityTools.runtimeSecurity');
-      expect(result.warnings[0].message).toContain('Runtime security monitoring is recommended');
+      expect(result.warnings[0].message).toContain('Runtime security monitoring is recommended for high-risk environments');
       expect(result.warnings[0].complianceFramework).toBe('fedramp-high');
     });
   });
 
   describe('Compliance Configuration Validation', () => {
-    test('should require minimum log retention for commercial', () => {
+    test('should require minimum log retention based on config', () => {
+      // Set minLogRetentionDays (set by builder based on risk level)
+      config.minLogRetentionDays = 30;
       config.logging.logRetentionDays = 15; // Less than minimum 30 days
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
@@ -246,11 +254,13 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe('logging.logRetentionDays');
-      expect(result.errors[0].message).toContain('at least 30 days for commercial compliance');
+      expect(result.errors[0].message).toContain('at least 30 days (set by builder based on risk level)');
     });
 
-    test('should require minimum log retention for FedRAMP', () => {
+    test('should require minimum log retention for high-risk environments', () => {
       context.complianceFramework = 'fedramp-moderate';
+      // Set minLogRetentionDays (set by builder based on risk level)
+      config.minLogRetentionDays = 90;
       config.logging.logRetentionDays = 60; // Less than minimum 90 days
       // Set up VPC to avoid VPC error (this test is only testing log retention)
       config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
@@ -260,11 +270,13 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe('logging.logRetentionDays');
-      expect(result.errors[0].message).toContain('at least 90 days for fedramp-moderate compliance');
+      expect(result.errors[0].message).toContain('at least 90 days (set by builder based on risk level)');
     });
 
-    test('should require active tracing for FedRAMP', () => {
+    test('should require active tracing for high-risk environments', () => {
       context.complianceFramework = 'fedramp-moderate';
+      // Set requireActiveTracing flag (set by builder based on compliance framework)
+      config.requireActiveTracing = true;
       config.tracing.mode = 'PassThrough';
       // Set up VPC and log retention to avoid extra errors (this test is only testing tracing)
       config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
@@ -275,11 +287,14 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe('tracing.mode');
-      expect(result.errors[0].message).toContain('Active X-Ray tracing is mandatory for FedRAMP compliance');
+      expect(result.errors[0].message).toContain('Active X-Ray tracing is mandatory for high-risk environments');
+      expect(result.errors[0].complianceFramework).toBe('fedramp-moderate');
     });
 
-    test('should recommend high hardening for FedRAMP High', () => {
+    test('should recommend high hardening for high-risk environments', () => {
       context.complianceFramework = 'fedramp-high';
+      // Set requireHighHardening flag (set by builder based on compliance framework)
+      config.requireHighHardening = true;
       config.hardeningProfile = 'standard';
       // Set up KMS, VPC, log retention, tracing, and runtime security to avoid extra warnings/errors (this test is only testing hardening)
       config.kmsKeyArn = 'arn:aws:kms:us-east-1:123456789012:key/12345678';
@@ -292,7 +307,8 @@ describe('Lambda Worker Validator Tests', () => {
 
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0].field).toBe('hardeningProfile');
-      expect(result.warnings[0].message).toContain('High hardening profile is recommended for FedRAMP High compliance');
+      expect(result.warnings[0].message).toContain('High hardening profile is recommended for high-risk environments');
+      expect(result.warnings[0].complianceFramework).toBe('fedramp-high');
     });
   });
 

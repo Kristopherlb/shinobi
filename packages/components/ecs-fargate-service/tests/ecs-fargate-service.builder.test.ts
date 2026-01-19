@@ -54,15 +54,23 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
       complianceFramework: 'fedramp-moderate'
     } as ComponentContext;
 
-    const builder = new EcsFargateServiceComponentConfigBuilder(context, baseSpec);
+    const spec: ComponentSpec = {
+      ...baseSpec,
+      config: {
+        ...baseSpec.config,
+        highRiskEnvironment: true
+      }
+    };
+
+    const builder = new EcsFargateServiceComponentConfigBuilder(context, spec);
     const config = builder.buildSync();
     // Higher resource allocations for FedRAMP
     expect(config.cpu).toBe(512);
     expect(config.memory).toBe(1024);
     expect(config.desiredCount).toBe(2); // High availability
 
-    // Longer log retention (3 years for FedRAMP Moderate)
-    expect(config.logging.retentionInDays).toBe(1096);
+    // Longer log retention (3 years for FedRAMP Moderate = 1095 days)
+    expect(config.logging.retentionInDays).toBe(1095);
     expect(config.logging.removalPolicy).toBe('retain');
 
     // ECS Exec enabled for audit

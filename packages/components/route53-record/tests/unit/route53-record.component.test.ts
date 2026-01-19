@@ -5,18 +5,23 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Stack } from 'aws-cdk-lib';
+import { App, Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
+import { createTestApp, createMockedServices } from '../../../../core/src/platform/contracts/__tests__/test-helpers.js';
 import { Route53RecordComponent } from '../../src/route53-record.component';
 import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces.js';
 
 describe('Route53RecordComponent', () => {
+  let app: App;
   let stack: Stack;
   let mockContext: ComponentContext;
   let mockSpec: ComponentSpec;
+  let mockedServices: ReturnType<typeof createMockedServices>;
 
   beforeEach(() => {
-    stack = new Stack();
+    app = createTestApp();
+    stack = new Stack(app, 'Route53TestStack');
+    mockedServices = createMockedServices();
     mockContext = {
       serviceName: 'test-service',
       environment: 'test',
@@ -43,7 +48,7 @@ describe('Route53RecordComponent', () => {
 
   // Helper function to create and synthesize component
   const createAndSynthComponent = (spec: ComponentSpec = mockSpec): Route53RecordComponent => {
-    const component = new Route53RecordComponent(stack, 'TestDnsRecord', mockContext, spec);
+    const component = new Route53RecordComponent(stack, 'TestDnsRecord', mockContext, spec, mockedServices);
     component.synth();
     return component;
   };

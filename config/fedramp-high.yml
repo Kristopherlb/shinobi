@@ -906,7 +906,7 @@ defaults:
       logging:
         createLogGroup: true
         streamPrefix: service
-        retentionInDays: 731
+        retentionInDays: 2557
         removalPolicy: retain
       monitoring:
         enabled: true
@@ -1551,6 +1551,21 @@ defaults:
         logExports:
           - postgresql
       hardeningProfile: stig
+    step-functions-statemachine:
+      stateMachineType: STANDARD
+      loggingConfiguration:
+        enabled: true
+        level: ALL
+        includeExecutionData: true
+      tracingConfiguration:
+        enabled: true
+      timeout:
+        seconds: 1800
+      highRiskEnvironment: true
+      tags:
+        compliance-framework: fedramp-high
+        security-level: high
+
     iam-role:
       maxSessionDuration: 3600
       path: "/"
@@ -1561,7 +1576,7 @@ defaults:
           removalPolicy: retain
         audit:
           enabled: true
-          retentionInDays: 730
+          retentionInDays: 1095
           removalPolicy: retain
       monitoring:
         enabled: true

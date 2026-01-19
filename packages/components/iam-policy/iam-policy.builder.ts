@@ -114,6 +114,9 @@ export interface IamPolicyConfig {
   
   /** Tagging configuration */
   tags?: Record<string, string>;
+  
+  /** High-risk environment flag (set via platform config or service.yml). When true, applies enhanced security defaults aligned with FedRAMP requirements. */
+  highRiskEnvironment?: boolean;
 }
 
 /**
@@ -206,6 +209,11 @@ export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
       type: 'object',
       description: 'Additional resource tags',
       additionalProperties: { type: 'string' }
+    },
+    highRiskEnvironment: {
+      type: 'boolean',
+      description: 'High-risk environment flag (set via platform config or service.yml). When true, applies enhanced security defaults aligned with FedRAMP requirements.',
+      default: false
     },
     logging: {
       type: 'object',
@@ -395,6 +403,83 @@ export class IamPolicyComponentConfigBuilder extends ConfigBuilder<IamPolicyConf
       },
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<IamPolicyConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<IamPolicyConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        monitoring: {
+          enabled: true,
+          detailedMetrics: true,
+          usageAlarm: {
+            enabled: true,
+            threshold: 500, // Lower threshold for high-risk environments
+            evaluationPeriods: 3, // More evaluation periods for reliability
+            periodMinutes: 60,
+            treatMissingData: 'breaching' // Treat missing data as breach in high-risk
+          }
+        },
+        logging: {
+          usage: {
+            enabled: true,
+            retentionInDays: 1095, // 3 years retention for high-risk environments (can be overridden to 2555 for higher risk)
+            removalPolicy: 'retain' // Retain logs in high-risk environments
+          },
+          compliance: {
+            enabled: true,
+            retentionInDays: 2555, // 7 years for compliance logs in high-risk
+            removalPolicy: 'retain'
+          },
+          audit: {
+            enabled: true,
+            retentionInDays: 2555, // 7 years for audit logs in high-risk
+            removalPolicy: 'retain'
+          }
+        },
+        controls: {
+          denyInsecureTransport: true, // Deny insecure transport in high-risk environments
+          requireMfaForActions: [
+            // Common high-risk actions that should require MFA
+            'iam:CreateUser',
+            'iam:DeleteUser',
+            'iam:AttachUserPolicy',
+            'iam:DetachUserPolicy',
+            'iam:CreateAccessKey',
+            'iam:DeleteAccessKey'
+          ],
+          additionalStatements: []
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): IamPolicyConfig {

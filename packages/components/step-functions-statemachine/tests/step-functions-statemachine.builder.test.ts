@@ -36,7 +36,7 @@ describe('StepFunctionsStateMachineConfigBuilder', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
-      const builder = new StepFunctionsStateMachineConfigBuilder({ context, spec });
+      const builder = new StepFunctionsStateMachineConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Verify hardcoded fallbacks are applied
@@ -56,7 +56,7 @@ describe('StepFunctionsStateMachineConfigBuilder', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
       
-      const builder = new StepFunctionsStateMachineConfigBuilder({ context, spec });
+      const builder = new StepFunctionsStateMachineConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Commercial should have basic settings
@@ -68,7 +68,7 @@ describe('StepFunctionsStateMachineConfigBuilder', () => {
       const context = createMockContext('fedramp-moderate');
       const spec = createMockSpec();
       
-      const builder = new StepFunctionsStateMachineConfigBuilder({ context, spec });
+      const builder = new StepFunctionsStateMachineConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // FedRAMP moderate should have enhanced logging
@@ -83,7 +83,7 @@ describe('StepFunctionsStateMachineConfigBuilder', () => {
       const context = createMockContext('fedramp-high');
       const spec = createMockSpec();
       
-      const builder = new StepFunctionsStateMachineConfigBuilder({ context, spec });
+      const builder = new StepFunctionsStateMachineConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // FedRAMP high should have maximum security
@@ -112,7 +112,7 @@ describe('StepFunctionsStateMachineConfigBuilder', () => {
         }
       });
       
-      const builder = new StepFunctionsStateMachineConfigBuilder({ context, spec });
+      const builder = new StepFunctionsStateMachineConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Verify component config overrides platform defaults
@@ -130,7 +130,7 @@ describe('StepFunctionsStateMachineConfigBuilder', () => {
         }
       });
       
-      const builder = new StepFunctionsStateMachineConfigBuilder({ context, spec });
+      const builder = new StepFunctionsStateMachineConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Should merge compliance defaults with component overrides

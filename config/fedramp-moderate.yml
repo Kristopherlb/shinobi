@@ -835,7 +835,8 @@ defaults:
     ecs-fargate-service:
       cpu: 512
       memory: 1024
-      desiredCount: 1
+      desiredCount: 2
+      ephemeralStorageGiB: 50
       autoScaling:
         minCapacity: 1
         maxCapacity: 5
@@ -844,8 +845,9 @@ defaults:
       logging:
         createLogGroup: true
         streamPrefix: service
-        retentionInDays: 365
+        retentionInDays: 1095
         removalPolicy: retain
+      useCustomerManagedKeyForLogs: true
       monitoring:
         enabled: true
         alarms:
@@ -861,7 +863,7 @@ defaults:
             periodMinutes: 5
           runningTaskCount:
             enabled: true
-            threshold: 1
+            threshold: 2
             comparisonOperator: lt
             evaluationPeriods: 2
             periodMinutes: 1
@@ -1486,7 +1488,7 @@ defaults:
           removalPolicy: retain
         audit:
           enabled: true
-          retentionInDays: 365
+          retentionInDays: 1095
           removalPolicy: retain
       monitoring:
         enabled: true
@@ -1503,6 +1505,20 @@ defaults:
           enforceMfa: true
           allowExternalId: false
           allowedServicePrincipals: []
+
+    step-functions-statemachine:
+      stateMachineType: STANDARD
+      loggingConfiguration:
+        enabled: true
+        level: ALL
+        includeExecutionData: true
+      tracingConfiguration:
+        enabled: true
+      timeout:
+        seconds: 1800
+      highRiskEnvironment: true
+      tags:
+        compliance-framework: fedramp-moderate
 
     network-rules-stack:
       ssmPathPrefix: /shinobi/network-rules

@@ -155,12 +155,56 @@ export class SageMakerNotebookInstanceComponentConfigBuilder extends ConfigBuild
   
   /**
    * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
    */
   protected getComplianceFrameworkDefaults(): Partial<SageMakerNotebookInstanceConfig> {
-    // The platform configuration is automatically loaded by the base class
-    // and merged in the buildSync() method. We don't need to do anything here.
-    return {};
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<SageMakerNotebookInstanceConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        rootAccess: 'Disabled', // Disable root access in high-risk environments
+        directInternetAccess: 'Disabled', // Disable direct internet access (require VPC endpoint)
+        security: {
+          kmsEncryption: true, // Enable KMS encryption in high-risk environments
+          vpcOnly: true // Require VPC-only access in high-risk environments
+        },
+        compliance: {
+          auditLogging: true, // Enable audit logging in high-risk environments
+          retentionDays: 1095 // 3 years retention for high-risk environments (can be overridden to 2555 for higher risk)
+        },
+        instanceMetadataServiceConfiguration: {
+          minimumInstanceMetadataServiceVersion: '2' // Require IMDSv2 in high-risk environments
+        },
+        monitoring: {
+          enabled: true,
+          detailedMetrics: true // Enable detailed metrics in high-risk environments
+        },
+        retainKmsKey: true // Retain KMS key on deletion in high-risk environments
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
   
   /**

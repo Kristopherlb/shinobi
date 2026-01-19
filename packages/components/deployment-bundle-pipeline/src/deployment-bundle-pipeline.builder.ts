@@ -9,7 +9,6 @@ import configSchema from '../Config.schema.json' with { type: 'json' };
 import { DeploymentBundleConfig } from './types.js';
 
 const SUPPORTED_ENVIRONMENTS = ['dev', 'staging', 'prod'] as const;
-const SUPPORTED_FRAMEWORKS = ['commercial', 'fedramp-moderate', 'fedramp-high', 'iso27001', 'soc2'] as const;
 
 export const DEPLOYMENT_BUNDLE_PIPELINE_CONFIG_SCHEMA = configSchema as ComponentConfigSchema;
 
@@ -245,9 +244,8 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
       throw new Error(`Invalid environment. Must be one of: ${SUPPORTED_ENVIRONMENTS.join(', ')}`);
     }
 
-    if (config.complianceFramework && !SUPPORTED_FRAMEWORKS.includes(config.complianceFramework as any)) {
-      throw new Error(`Invalid compliance framework. Must be one of: ${SUPPORTED_FRAMEWORKS.join(', ')}`);
-    }
+    // Compliance framework validation is handled by JSON Schema validation
+    // in Config.schema.json - no hardcoded framework list needed for extensibility
 
     // Service name validation
     if (!/^[a-z0-9-]+$/.test(config.service)) {

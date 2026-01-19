@@ -340,6 +340,7 @@ export class EcsClusterComponent extends BaseComponent {
         logging: {
           containerInsights: boolean;
           retentionInDays?: number;
+          appliedRetentionInDays?: number;
         };
         tracing: {
           adotSidecar: boolean;
@@ -395,7 +396,8 @@ export class EcsClusterComponent extends BaseComponent {
       metrics: ['AWS/ECS:CPUUtilization', 'AWS/ECS:MemoryUtilization'],
       logging: {
         containerInsights: this.config.containerInsights ?? true,
-        retentionInDays: this.appliedLogRetentionInDays ?? this.config.observability?.logging?.retentionInDays
+        retentionInDays: this.config.observability?.logging?.retentionInDays,
+        appliedRetentionInDays: this.appliedLogRetentionInDays ?? this.config.observability?.logging?.retentionInDays
       },
       tracing: {
         adotSidecar,

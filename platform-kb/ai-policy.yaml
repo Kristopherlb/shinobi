@@ -7,5 +7,4 @@ ai:
       - packages/core/**
       - packages/orchestration/**
       - packages/api/**
-      - apps/harmony/**
 

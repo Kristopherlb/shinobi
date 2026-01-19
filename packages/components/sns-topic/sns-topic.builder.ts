@@ -263,6 +263,88 @@ export class SnsTopicComponentConfigBuilder extends ConfigBuilder<SnsTopicConfig
     return HARDENED_FALLBACKS;
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<SnsTopicConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<SnsTopicConfig> | undefined;
+    let isHighRisk = (componentConfig as any)?.highRiskEnvironment ?? false;
+    
+    // Load platform config if available (loaded by base class)
+    const platformConfig = (this as any)._loadPlatformConfiguration?.();
+    if (platformConfig?.highRiskEnvironment) {
+      isHighRisk = true;
+    }
+    
+    // If high-risk environment, return values from platform config (not hardcoded)
+    if (isHighRisk && platformConfig) {
+      // Map platform config values to component config structure
+      // All values come from platform config files, not hardcoded
+      const defaults: Partial<SnsTopicConfig> = {};
+      
+      if (platformConfig.encryption) {
+        defaults.encryption = {
+          enabled: platformConfig.encryption.enabled ?? false,
+          customerManagedKey: {
+            create: platformConfig.encryption.customerManagedKey?.create ?? false,
+            enableRotation: platformConfig.encryption.customerManagedKey?.enableRotation ?? true
+          }
+        };
+      }
+      
+      if (platformConfig.tracing !== undefined) {
+        defaults.tracing = platformConfig.tracing === 'Active' ? 'Active' : 'PassThrough';
+      }
+      
+      if (platformConfig.monitoring) {
+        defaults.monitoring = {
+          enabled: platformConfig.monitoring.enabled ?? false,
+          alarms: {
+            failedNotifications: platformConfig.monitoring.alarms?.failedNotifications
+              ? {
+                  enabled: platformConfig.monitoring.alarms.failedNotifications.enabled ?? false,
+                  threshold: platformConfig.monitoring.alarms.failedNotifications.threshold ?? 1,
+                  evaluationPeriods: platformConfig.monitoring.alarms.failedNotifications.evaluationPeriods ?? 1,
+                  periodMinutes: platformConfig.monitoring.alarms.failedNotifications.periodMinutes ?? 5,
+                  comparisonOperator: (platformConfig.monitoring.alarms.failedNotifications.comparisonOperator ?? 'gte') as AlarmComparisonOperator,
+                  treatMissingData: (platformConfig.monitoring.alarms.failedNotifications.treatMissingData ?? 'not-breaching') as AlarmTreatMissingData,
+                  statistic: (platformConfig.monitoring.alarms.failedNotifications.statistic ?? 'Sum') as 'Sum' | 'Average' | 'Minimum' | 'Maximum'
+                }
+              : { ...ALARM_BASELINE, enabled: false },
+            messageRate: platformConfig.monitoring.alarms?.messageRate
+              ? {
+                  enabled: platformConfig.monitoring.alarms.messageRate.enabled ?? false,
+                  threshold: platformConfig.monitoring.alarms.messageRate.threshold ?? 10000,
+                  evaluationPeriods: platformConfig.monitoring.alarms.messageRate.evaluationPeriods ?? 1,
+                  periodMinutes: platformConfig.monitoring.alarms.messageRate.periodMinutes ?? 5,
+                  comparisonOperator: (platformConfig.monitoring.alarms.messageRate.comparisonOperator ?? 'gte') as AlarmComparisonOperator,
+                  treatMissingData: (platformConfig.monitoring.alarms.messageRate.treatMissingData ?? 'not-breaching') as AlarmTreatMissingData,
+                  statistic: (platformConfig.monitoring.alarms.messageRate.statistic ?? 'Sum') as 'Sum' | 'Average' | 'Minimum' | 'Maximum'
+                }
+              : { ...ALARM_BASELINE, enabled: false }
+          }
+        };
+      }
+      
+      if (platformConfig.policies) {
+        defaults.policies = platformConfig.policies;
+      }
+      
+      return defaults;
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): SnsTopicConfig {
     const resolved = super.buildSync() as Partial<SnsTopicConfig>;
     return this.normaliseConfig(resolved);

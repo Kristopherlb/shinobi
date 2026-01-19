@@ -67,6 +67,9 @@ export interface Route53RecordConfig {
   
   /** Tagging configuration (Route 53 records don't support tags, but for documentation) */
   tags?: Record<string, string>;
+  
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 /**
@@ -114,5 +117,55 @@ export class Route53RecordConfigBuilder extends ConfigBuilder<Route53RecordConfi
         'RecordType': 'A'
       }
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   * 
+   * Note: Route53 records are DNS routing resources with minimal security configuration.
+   * For high-risk environments, we recommend using evaluateTargetHealth for health checks,
+   * but this should be configured per record type based on actual requirements.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<Route53RecordConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<Route53RecordConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        record: {
+          recordName: '', // Will be overridden by user config
+          recordType: 'A', // Required property
+          zoneName: '', // Will be overridden by user config
+          target: '', // Will be overridden by user config
+          // Enable health checks for high-risk environments to ensure failover
+          evaluateTargetHealth: true,
+          // Lower TTL for faster failover (can be overridden per record)
+          ttl: 60 // 1 minute for faster DNS propagation during failover
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 }

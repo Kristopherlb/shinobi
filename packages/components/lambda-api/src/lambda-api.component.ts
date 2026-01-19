@@ -198,15 +198,31 @@ export class LambdaApiComponent extends BaseComponent {
     let securityGroups: ec2.ISecurityGroup[] | undefined;
 
     if (this.config?.vpc.enabled) {
-      vpc = this.lookupVpc();
+      // Priority 1: Use injected VPC from context (preferred for tests)
+      if (this.context.vpc) {
+        vpc = this.context.vpc;
+      }
+      // Priority 2: Use fromLookup() if vpcId provided in config
+      else if (this.config.vpc.vpcId) {
+        vpc = this.lookupVpc();
+      }
+      // Priority 3: Error if neither provided
+      else {
+        throw new Error('Lambda API VPC configuration must include vpcId when enabled, or a VPC provided via context.vpc.');
+      }
 
-      const subnetIds = this.config.vpc.subnetIds.length > 0
-        ? this.config.vpc.subnetIds
-        : vpc.privateSubnets.map((subnet) => subnet.subnetId);
+      // When using injected VPC, prefer VPC's subnet constructs directly
+      if (this.context.vpc && this.config.vpc.subnetIds.length === 0) {
+        subnets = vpc.privateSubnets;
+      } else {
+        const subnetIds = this.config.vpc.subnetIds.length > 0
+          ? this.config.vpc.subnetIds
+          : vpc.privateSubnets.map((subnet) => subnet.subnetId);
 
-      subnets = subnetIds.map((subnetId, index) =>
-        ec2.Subnet.fromSubnetId(this, `LambdaApiSubnet${index}`, subnetId)
-      );
+        subnets = subnetIds.map((subnetId, index) =>
+          ec2.Subnet.fromSubnetId(this, `LambdaApiSubnet${index}`, subnetId)
+        );
+      }
 
       securityGroups = this.config.vpc.securityGroupIds.map((sgId, index) =>
         ec2.SecurityGroup.fromSecurityGroupId(this, `LambdaApiSecurityGroup${index}`, sgId)

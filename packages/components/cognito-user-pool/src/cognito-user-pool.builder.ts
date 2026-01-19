@@ -152,6 +152,8 @@ export interface CognitoUserPoolConfig {
   appClients: AppClientConfig[];
   monitoring: MonitoringConfig;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const DEFAULT_SIGN_IN: SignInAliasConfig = {
@@ -247,6 +249,77 @@ export class CognitoUserPoolComponentConfigBuilder extends ConfigBuilder<Cognito
       monitoring: DEFAULT_MONITORING,
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<CognitoUserPoolConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<CognitoUserPoolConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        highRiskEnvironment: true, // Set the flag so component can use it
+        passwordPolicy: {
+          minLength: 14, // Longer minimum length for high-risk environments
+          requireLowercase: true,
+          requireUppercase: true,
+          requireDigits: true,
+          requireSymbols: true, // Require symbols for high-risk environments
+          tempPasswordValidity: 1 // Shorter temporary password validity
+        },
+        mfa: {
+          mode: 'required', // MFA required for high-risk environments
+          enableSms: true,
+          enableTotp: true,
+          smsMessage: DEFAULT_MFA.smsMessage
+        },
+        advancedSecurityMode: 'enforced', // Enforced mode for high-risk environments
+        deletionProtection: true, // Enable deletion protection for high-risk environments
+        removalPolicy: 'retain', // Retain resources on deletion for high-risk environments
+        deviceTracking: {
+          challengeRequiredOnNewDevice: true, // Require challenge on new devices
+          deviceOnlyRememberedOnUserPrompt: true
+        },
+        monitoring: {
+          enabled: true,
+          signInSuccess: DEFAULT_MONITORING.signInSuccess,
+          signInThrottle: DEFAULT_MONITORING.signInThrottle,
+          signUpSuccess: DEFAULT_MONITORING.signUpSuccess,
+          signUpThrottle: DEFAULT_MONITORING.signUpThrottle,
+          riskHigh: {
+            enabled: true, // Enable high-risk event monitoring
+            threshold: 1,
+            evaluationPeriods: 1,
+            periodMinutes: 5
+          }
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): CognitoUserPoolConfig {

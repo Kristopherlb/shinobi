@@ -136,7 +136,8 @@ describe('EcsFargateServiceComponent synthesis', () => {
         serviceConnect: {
           portMappingName: 'api',
           namespace: 'internal.local'
-        }
+        },
+        highRiskEnvironment: true
       }
     };
 

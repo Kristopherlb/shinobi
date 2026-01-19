@@ -13,6 +13,7 @@
   },
   "include": [
     "index.ts",
+    "Config.schema.json",
     "src/**/*.ts"
   ],
   "exclude": [

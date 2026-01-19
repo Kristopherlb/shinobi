@@ -167,13 +167,14 @@ export class LambdaApiValidator {
    */
   private validateSecurityConfiguration(config: LambdaApiConfig, errors: ValidationError[], warnings: ValidationWarning[]): void {
     // VPC configuration validation
-    if (config.vpc.enabled && config.vpc.subnetIds.length === 0) {
+    // Allow empty subnetIds if VPC is provided via context.vpc (component will use VPC's private subnets)
+    if (config.vpc.enabled && config.vpc.subnetIds.length === 0 && !this.context.vpc) {
       errors.push({
         code: 'LAMBDA_API_SEC_001',
         message: 'VPC configuration enabled but no subnets specified',
         field: 'vpc.subnetIds',
         severity: 'critical',
-        remediation: 'Specify at least one subnet ID when VPC is enabled'
+        remediation: 'Specify at least one subnet ID when VPC is enabled, or provide a VPC via context.vpc'
       });
     }
 

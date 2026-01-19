@@ -36,21 +36,29 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
         const framework = this.builderContext.context.complianceFramework;
         if (framework === 'fedramp-moderate') {
           return {
+            highRiskEnvironment: true,
             storage: { encrypted: true, rootVolumeSize: 50 },
             monitoring: { detailed: true, cloudWatchAgent: true },
-            security: { requireImdsv2: true, httpTokens: 'required' }
+            security: { requireImdsv2: true, httpTokens: 'required' },
+            enableStigCompliance: true
           };
         }
 
         if (framework === 'fedramp-high') {
           return {
+            highRiskEnvironment: true,
             storage: { encrypted: true, rootVolumeType: 'io2', iops: 1000 },
             monitoring: { detailed: true, cloudWatchAgent: true },
-            security: { requireImdsv2: true, httpTokens: 'required', nitroEnclaves: true }
+            security: { requireImdsv2: true, httpTokens: 'required', nitroEnclaves: true },
+            enableStigCompliance: true,
+            enableImmutableInfrastructure: true
           };
         }
 
-        return {};
+        // Commercial: explicitly set encrypted: false to prevent KMS key creation
+        return {
+          storage: { encrypted: false }
+        };
       });
   });
 

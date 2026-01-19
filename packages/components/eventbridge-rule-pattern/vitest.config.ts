@@ -3,7 +3,7 @@ import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [nxViteTsPaths()],
+  plugins: [nxViteTsPaths({ debug: false })],
   test: {
     globals: true,
     environment: 'node',

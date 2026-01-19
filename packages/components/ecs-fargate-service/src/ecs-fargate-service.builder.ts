@@ -362,21 +362,26 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
    * Layer 2: Compliance Framework Defaults
    * 
    * Provides sensible defaults based on risk assessment flags rather than framework checks.
-   * High-risk environment defaults can be set via:
+   * High-risk environment defaults are loaded from platform config files (`/config/{framework}.yml`).
+   * High-risk environment flag can be set via:
    * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
    * - Service-level configuration in `service.yml`
    * - Environment defaults
    * 
    * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   * 
+   * CRITICAL: This method MUST NEVER check compliance frameworks directly.
+   * Components must be configuration-driven for scalability and evolution.
    */
   protected getComplianceFrameworkDefaults(): Partial<EcsFargateServiceConfig> {
     // Check if highRiskEnvironment flag is set in component config or platform config
     const componentConfig = this.builderContext.spec.config as Partial<EcsFargateServiceConfig> | undefined;
     let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
     
-    // Also check platform config if available (loaded by base class)
+    // Load platform config if available (loaded by base class)
+    let platformConfig: Record<string, any> | undefined;
     try {
-      const platformConfig = (this as any)._loadPlatformConfiguration();
+      platformConfig = (this as any)._loadPlatformConfiguration();
       if (platformConfig?.highRiskEnvironment) {
         isHighRisk = true;
       }
@@ -384,53 +389,55 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       // Platform config might not be available in tests, ignore
     }
     
-    if (isHighRisk) {
-      // Apply enhanced security defaults for high-risk environments
-      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
-      return {
-        // Enhanced compute resources for high-risk environments
-        cpu: 1024,
-        memory: 2048,
-        // High availability required
-        desiredCount: 2,
-        // Enhanced ephemeral storage for high-risk environments
-        ephemeralStorageGiB: 50,
-        // Enhanced logging with longer retention
-        logging: {
-          createLogGroup: true,
-          streamPrefix: this.builderContext.spec.name,
-          retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
-          removalPolicy: 'retain'
-        },
-        // Use customer-managed KMS key for log encryption
-        useCustomerManagedKeyForLogs: true,
-        // Stricter monitoring thresholds
-        monitoring: {
-          enabled: true,
+    // If high-risk environment, return values from platform config (not hardcoded)
+    if (isHighRisk && platformConfig) {
+      // Map platform config values to component config structure
+      // All values come from platform config files, not hardcoded
+      const defaults: Partial<EcsFargateServiceConfig> = {};
+      
+      if (platformConfig.cpu !== undefined) defaults.cpu = platformConfig.cpu;
+      if (platformConfig.memory !== undefined) defaults.memory = platformConfig.memory;
+      if (platformConfig.desiredCount !== undefined) defaults.desiredCount = platformConfig.desiredCount;
+      if (platformConfig.ephemeralStorageGiB !== undefined) defaults.ephemeralStorageGiB = platformConfig.ephemeralStorageGiB;
+      
+      if (platformConfig.logging) {
+        defaults.logging = {
+          createLogGroup: platformConfig.logging.createLogGroup ?? true,
+          streamPrefix: platformConfig.logging.streamPrefix ?? this.builderContext.spec.name,
+          retentionInDays: platformConfig.logging.retentionInDays,
+          removalPolicy: platformConfig.logging.removalPolicy === 'retain' ? 'retain' : 'destroy'
+        };
+      }
+      
+      // KMS encryption comes from platform config, not hardcoded
+      if (platformConfig.useCustomerManagedKeyForLogs !== undefined) {
+        defaults.useCustomerManagedKeyForLogs = platformConfig.useCustomerManagedKeyForLogs;
+      }
+      
+      if (platformConfig.monitoring) {
+        defaults.monitoring = {
+          enabled: platformConfig.monitoring.enabled ?? true,
           alarms: {
-            cpuUtilization: {
-              ...DEFAULT_ALARM_BASELINE,
-              enabled: true,
-              threshold: 75
-            },
-            memoryUtilization: {
-              ...DEFAULT_ALARM_BASELINE,
-              enabled: true,
-              threshold: 80
-            },
-            runningTaskCount: {
-              ...DEFAULT_ALARM_BASELINE,
-              enabled: true,
-              threshold: 2,
-              comparisonOperator: 'lt'
-            }
+            cpuUtilization: platformConfig.monitoring.alarms?.cpuUtilization 
+              ? { ...DEFAULT_ALARM_BASELINE, ...platformConfig.monitoring.alarms.cpuUtilization }
+              : { ...DEFAULT_ALARM_BASELINE, enabled: true, threshold: 85 },
+            memoryUtilization: platformConfig.monitoring.alarms?.memoryUtilization
+              ? { ...DEFAULT_ALARM_BASELINE, ...platformConfig.monitoring.alarms.memoryUtilization }
+              : { ...DEFAULT_ALARM_BASELINE, enabled: true, threshold: 90 },
+            runningTaskCount: platformConfig.monitoring.alarms?.runningTaskCount
+              ? { ...DEFAULT_ALARM_BASELINE, ...platformConfig.monitoring.alarms.runningTaskCount }
+              : { ...DEFAULT_ALARM_BASELINE, enabled: true, threshold: 1, comparisonOperator: 'lt' }
           }
-        },
-        // ECS Exec required for audit
-        diagnostics: {
-          enableExecuteCommand: true
-        }
-      };
+        };
+      }
+      
+      if (platformConfig.diagnostics) {
+        defaults.diagnostics = {
+          enableExecuteCommand: platformConfig.diagnostics.enableExecuteCommand ?? false
+        };
+      }
+      
+      return defaults;
     }
     
     return {}; // Standard/default environment - use hardcoded fallbacks
@@ -479,7 +486,9 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       network: this.normaliseNetwork(config.network),
       hardeningProfile: config.hardeningProfile ?? 'baseline',
       tags: config.tags ?? {},
-      highRiskEnvironment: config.highRiskEnvironment
+      highRiskEnvironment: config.highRiskEnvironment,
+      useCustomerManagedKeyForLogs: config.useCustomerManagedKeyForLogs ?? false,
+      ephemeralStorageGiB: config.ephemeralStorageGiB
     };
   }
 
@@ -595,9 +604,11 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
     autoScaling: EcsFargateAutoScalingConfig | undefined
   ): EcsFargateMonitoringConfig {
     const enabled = monitoring?.enabled ?? true;
-    const runningTaskThreshold = monitoring?.alarms?.runningTaskCount?.threshold
-      ?? autoScaling?.minCapacity
-      ?? desiredCount;
+    // If threshold is explicitly set (including from compliance defaults), use it
+    // Otherwise fall back to autoScaling minCapacity or desiredCount
+    const runningTaskThreshold = monitoring?.alarms?.runningTaskCount?.threshold !== undefined
+      ? monitoring.alarms.runningTaskCount.threshold
+      : (autoScaling?.minCapacity ?? desiredCount);
 
     // Use config values - thresholds are set by getComplianceFrameworkDefaults() for high-risk environments
     const cpuThreshold = monitoring?.alarms?.cpuUtilization?.threshold ?? 85;

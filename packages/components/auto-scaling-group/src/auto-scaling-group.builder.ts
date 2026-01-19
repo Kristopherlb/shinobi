@@ -196,6 +196,66 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
     };
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<AutoScalingGroupConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<AutoScalingGroupConfig> | undefined;
+    let isHighRisk = (componentConfig as any)?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        storage: {
+          rootVolumeSize: 20, // Will be overridden by user config
+          rootVolumeType: 'gp3', // Will be overridden by user config
+          encrypted: true,
+          kms: {
+            useCustomerManagedKey: true,
+            enableKeyRotation: true
+          }
+        },
+        launchTemplate: {
+          instanceType: 't3.micro', // Will be overridden by user config
+          detailedMonitoring: true, // Required property - enable for high-risk
+          requireImdsv2: true, // Required property - IMDSv2 required for high-risk
+          installAgents: {
+            ssm: true, // Required property
+            cloudwatch: true, // Required property
+            stigHardening: true
+          }
+        },
+        security: {
+          managedPolicies: [], // Will be overridden by user config
+          attachLogDeliveryPolicy: true, // Required property
+          stigComplianceTag: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): AutoScalingGroupConfig {
     const resolved = super.buildSync() as AutoScalingGroupConfig;
     return this.normaliseConfig(resolved);

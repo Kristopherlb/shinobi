@@ -3,9 +3,10 @@
  * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
  */
 
-import { App, Stack } from 'aws-cdk-lib';
+import { Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentCapabilities, ComponentContext, ComponentSpec } from '@shinobi/core';
+import { createTestApp, createMockedServices } from '../../../../core/src/platform/contracts/__tests__/test-helpers.js';
 import { FeatureFlagComponent } from '../../src/feature-flag.component';
 import { FeatureFlagConfig } from '../../src/feature-flag.builder';
 
@@ -34,11 +35,12 @@ const synthesize = (
   spec: ComponentSpec,
   overrides: Partial<ComponentContext> = {}
 ): { component: FeatureFlagComponent; template: Template; capabilities: ComponentCapabilities } => {
-  const app = new App();
+  const app = createTestApp();
   const stack = new Stack(app, 'FeatureFlagTestStack');
   const context = createContext(stack, overrides);
+  const mockedServices = createMockedServices();
 
-  const component = new FeatureFlagComponent(stack, spec.name, context, spec);
+  const component = new FeatureFlagComponent(stack, spec.name, context, spec, mockedServices);
   component.synth();
 
   return {

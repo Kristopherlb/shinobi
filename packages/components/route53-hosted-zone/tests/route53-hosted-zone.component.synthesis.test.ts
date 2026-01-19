@@ -2,13 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { createTestApp, createMockedServices } from '../../../core/src/platform/contracts/__tests__/test-helpers.js';
 import { Route53HostedZoneComponent } from '../route53-hosted-zone.component';
 import { Route53HostedZoneConfig } from '../route53-hosted-zone.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createContext = (framework: string = 'commercial', stack?: Stack): ComponentContext => {
-  const app = stack?.node.root as App || new App();
-  const testStack = stack || new Stack(app, 'TestStack', {
+const createContext = (framework: string = 'commercial', stack?: Stack, app?: App): ComponentContext => {
+  const testApp = app || createTestApp();
+  const testStack = stack || new Stack(testApp, 'TestStack', {
     env: { account: '123456789012', region: 'us-east-1' }
   });
 
@@ -41,7 +42,8 @@ const createSpec = (config: Partial<Route53HostedZoneConfig>): ComponentSpec => 
 });
 
 const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
-  const component = new Route53HostedZoneComponent(context.scope, spec.name, context, spec);
+  const mockedServices = createMockedServices();
+  const component = new Route53HostedZoneComponent(context.scope, spec.name, context, spec, mockedServices);
   component.synth();
 
   return {
@@ -104,12 +106,12 @@ describe('Route53HostedZoneComponent synthesis', () => {
 
   it('creates a private hosted zone with VPC association and DNSSEC', () => {
     // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
-    const app = new App();
+    const app = createTestApp();
     const stack = new Stack(app, 'TestStack', {
       env: { account: '123456789012', region: 'us-east-1' }
     });
     const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
-    const context = createContext('commercial', stack);
+    const context = createContext('commercial', stack, app);
     context.vpc = vpc; // Inject VPC via context (avoids Vpc.fromLookup() in unit tests)
 
     const spec = createSpec({

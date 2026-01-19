@@ -61,6 +61,9 @@ export class Ec2InstanceComponent extends BaseComponent {
 
     // Step 4: Create security group
     this.createSecurityGroup();
+    
+    // Step 4a: Apply security group rules
+    this.applySecurityGroupRules();
 
     // Step 4b: Create log group for structured logging
     this.createInstanceLogGroup();
